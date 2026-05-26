@@ -1,0 +1,139 @@
+# ==========================================
+# 1. AMBIENTES VIRTUAIS E PACOTES PYTHON
+# ==========================================
+venv/
+env/
+.venv/
+.env/
+env.bak/
+venv.bak/
+/site-packages/
+*.egg-info/
+.eggs/
+eggs/
+lib/
+lib64/
+__pypackages__/
+
+# ==========================================
+# 2. ARQUIVOS COMPILADOS DO PYTHON
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# ==========================================
+# 3. BUILD E DISTRIBUIÇÃO
+# ==========================================
+dist/
+build/
+*.whl
+*.egg
+
+# ==========================================
+# 4. VARIÁVEIS DE AMBIENTE E SEGURANÇA
+# ==========================================
+.env
+.env.local
+.env.dev
+.env.test
+.env.staging
+.env.prod
+*.pem
+credentials.json
+secrets.json
+auth.json
+
+# ==========================================
+# 5. BANCOS DE DADOS LOCAIS
+# ==========================================
+*.sqlite3
+*.db
+*.sqlite
+/data/
+/db/
+
+# ==========================================
+# 6. UPLOADS E ARQUIVOS DE MÍDIA
+# ==========================================
+/uploads/
+/media/
+
+# ==========================================
+# 7. IDEs E EDITORES DE CÓDIGO
+# ==========================================
+# VS Code
+.vscode/
+*.code-workspace
+
+# PyCharm / IntelliJ
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Sublime Text / Outros
+*.sublime-workspace
+*.sublime-project
+.spyderproject
+.spyproject
+
+# Vim / Emacs
+*~
+*.swp
+*.swo
+*.tmp
+
+# ==========================================
+# 8. SISTEMAS OPERACIONAIS
+# ==========================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.Trash-*
+
+# ==========================================
+# 9. LOGS E DEBUGGING
+# ==========================================
+*.log
+logs/
+celerybeat-schedule
+celerybeat.pid
+
+# ==========================================
+# 10. PROFILING E PERFORMANCE
+# ==========================================
+*.prof
+*.lprof
+
+# ==========================================
+# 11. CACHES E FERRAMENTAS DE TESTE/LINT
+# ==========================================
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+htmlcov/
+coverage.xml
+nosetests.xml
+bandit-report.json
+.pylint.d/
+
+# ==========================================
+# 12. DOCKER
+# ==========================================
+# Volumes locais mapeados para dentro do projeto
+docker-data/
+# Nota: .dockerignore pertence ao repositório — não ignorar
