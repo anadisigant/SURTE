@@ -1,0 +1,673 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_Surte" targetNamespace="http://surte.bpmn/processo" exporter="Camunda Modeler" exporterVersion="5.47.0">
+  <collaboration id="Collaboration_Surte">
+    <participant id="Pool_Sistema" name="Sistema SURTE" processRef="Process_Surte" />
+    <group id="Group_0s2n6df" categoryValueRef="CategoryValue_0o607ad" />
+    <group id="Group_04h2j51" categoryValueRef="CategoryValue_04uzgkj" />
+    <textAnnotation id="TextAnnotation_108nif1">
+      <text>Notificação de agendamento</text>
+    </textAnnotation>
+    <association id="Association_0ootbih" associationDirection="None" sourceRef="Task_ConsolidarHistorico" targetRef="TextAnnotation_108nif1" />
+    <textAnnotation id="TextAnnotation_1xgo48y">
+      <text>Impedir exlusõe acidentati que quebrem o hitórico</text>
+    </textAnnotation>
+    <association id="Association_09sdmph" associationDirection="None" sourceRef="Task_BloquearExclusaoHistorico" targetRef="TextAnnotation_1xgo48y" />
+  </collaboration>
+  <process id="Process_Surte" name="Processo SURTE" isExecutable="true">
+    <laneSet id="LaneSet_1">
+      <lane id="Lane_Backend" name="Backend SURTE (Python API)">
+        <flowNodeRef>DataObject_EntrevistaAgendada</flowNodeRef>
+        <flowNodeRef>DataObject_DadosFontes</flowNodeRef>
+        <flowNodeRef>DataObject_DadosProgramas</flowNodeRef>
+        <flowNodeRef>GW_PermissaoConcedida</flowNodeRef>
+        <flowNodeRef>Task_VerificarCredenciais</flowNodeRef>
+        <flowNodeRef>Task_LiberarModulos</flowNodeRef>
+        <flowNodeRef>Gateway_1kas51v</flowNodeRef>
+        <flowNodeRef>Task_AcessarModuloSelecionado</flowNodeRef>
+        <flowNodeRef>GW_Paralelo_GestaoProgramas</flowNodeRef>
+        <flowNodeRef>Activity_1m5sanf</flowNodeRef>
+        <flowNodeRef>Task_CriacaoProgramas</flowNodeRef>
+        <flowNodeRef>Task_ManutencaoVeiculos</flowNodeRef>
+        <flowNodeRef>Task_VincularPautasQuadros</flowNodeRef>
+        <flowNodeRef>Task_RegistrarCancelamento</flowNodeRef>
+        <flowNodeRef>Task_GerarEntrevista</flowNodeRef>
+        <flowNodeRef>IntermediateCatch_Cancelamento</flowNodeRef>
+        <flowNodeRef>Event_144ixp7</flowNodeRef>
+        <flowNodeRef>GW_StatusAtualizado</flowNodeRef>
+        <flowNodeRef>Task_ConsolidarHistorico</flowNodeRef>
+        <flowNodeRef>Event_0a3de9s</flowNodeRef>
+        <flowNodeRef>Task_RegistrarMetricas</flowNodeRef>
+        <flowNodeRef>Task_BloquearExclusaoHistorico</flowNodeRef>
+        <flowNodeRef>EndEvent_FimSucesso</flowNodeRef>
+      </lane>
+      <lane id="Lane_Usuario" name="Usuário do Sistema (Produtor / Jornalista)">
+        <flowNodeRef>StartEvent_InicioSistema</flowNodeRef>
+        <flowNodeRef>Task_RealizarLogin</flowNodeRef>
+        <flowNodeRef>Task_HistoricoParticipacoes</flowNodeRef>
+        <flowNodeRef>Task_CadastroDadosPessoais</flowNodeRef>
+        <flowNodeRef>Task_DefinirEspecializacoes</flowNodeRef>
+        <flowNodeRef>Task_AtualizarContatos</flowNodeRef>
+        <flowNodeRef>Activity_05zc04o</flowNodeRef>
+        <flowNodeRef>Task_SelecionarEntrevistado</flowNodeRef>
+        <flowNodeRef>Task_VincularProgramaDefinirDataHora</flowNodeRef>
+        <flowNodeRef>Task_AtualizarParaRealizada</flowNodeRef>
+        <flowNodeRef>Task_AtualizarParaCancelada</flowNodeRef>
+      </lane>
+    </laneSet>
+    <dataObject id="DataObject_EntrevistaAgendada" name="Entrevista Agendada" />
+    <dataObject id="DataObject_DadosFontes" name="Dados de Fontes" />
+    <dataObject id="DataObject_DadosProgramas" name="Dados de Programas" />
+    <sequenceFlow id="SF_GerenciarFontes_Cadastro" targetRef="Task_CadastroDadosPessoais" />
+    <sequenceFlow id="SF_GerenciarFontes_Espec" targetRef="Task_DefinirEspecializacoes" />
+    <sequenceFlow id="SF_GerenciarFontes_Contatos" targetRef="Task_AtualizarContatos" />
+    <sequenceFlow id="SF_GerenciarFontes_Historico" targetRef="Task_HistoricoParticipacoes" />
+    <sequenceFlow id="SF_Cadastro_Out" sourceRef="Task_CadastroDadosPessoais" targetRef="Task_AcessarModuloSelecionado" />
+    <sequenceFlow id="SF_Espec_Out" sourceRef="Task_DefinirEspecializacoes" targetRef="Task_AcessarModuloSelecionado" />
+    <sequenceFlow id="SF_Contatos_Out" sourceRef="Task_AtualizarContatos" targetRef="Task_AcessarModuloSelecionado" />
+    <sequenceFlow id="SF_Historico_Out" sourceRef="Task_HistoricoParticipacoes" targetRef="Task_AcessarModuloSelecionado" />
+    <sequenceFlow id="SF_GerenciarProgramas_Criacao" targetRef="Task_CriacaoProgramas" />
+    <sequenceFlow id="SF_GerenciarProgramas_Manutencao" targetRef="Task_ManutencaoVeiculos" />
+    <sequenceFlow id="SF_GerenciarProgramas_Vincular" targetRef="Task_VincularPautasQuadros" />
+    <sequenceFlow id="SF_Criacao_Out" sourceRef="Task_CriacaoProgramas" targetRef="Task_AcessarModuloSelecionado" />
+    <sequenceFlow id="SF_Manutencao_Out" sourceRef="Task_ManutencaoVeiculos" targetRef="Task_AcessarModuloSelecionado" />
+    <sequenceFlow id="SF_VincularPautas_Out" sourceRef="Task_VincularPautasQuadros" targetRef="Task_AcessarModuloSelecionado" />
+    <startEvent id="StartEvent_InicioSistema" name="Início do Sistema">
+      <outgoing>SF_InicioLogin</outgoing>
+    </startEvent>
+    <task id="Task_RealizarLogin" name="Realizar Login">
+      <incoming>SF_InicioLogin</incoming>
+      <incoming>SF_GW_Nao_AcessoNegado</incoming>
+      <outgoing>SF_LoginCredenciais</outgoing>
+    </task>
+    <exclusiveGateway id="GW_PermissaoConcedida" name="Permissão Concedida?">
+      <incoming>SF_Credenciais_GW</incoming>
+      <outgoing>SF_GW_Sim_LiberarModulos</outgoing>
+      <outgoing>SF_GW_Nao_AcessoNegado</outgoing>
+    </exclusiveGateway>
+    <sequenceFlow id="SF_InicioLogin" sourceRef="StartEvent_InicioSistema" targetRef="Task_RealizarLogin" />
+    <sequenceFlow id="SF_LoginCredenciais" name="Credenciais" sourceRef="Task_RealizarLogin" targetRef="Task_VerificarCredenciais" />
+    <sequenceFlow id="SF_Credenciais_GW" sourceRef="Task_VerificarCredenciais" targetRef="GW_PermissaoConcedida" />
+    <sequenceFlow id="SF_GW_Sim_LiberarModulos" name="Sim" sourceRef="GW_PermissaoConcedida" targetRef="Task_LiberarModulos" />
+    <sequenceFlow id="SF_GW_Nao_AcessoNegado" name="Não" sourceRef="GW_PermissaoConcedida" targetRef="Task_RealizarLogin" />
+    <sequenceFlow id="SF_StatusAtualizado_Realizada" name="Realizada" sourceRef="GW_StatusAtualizado" targetRef="Task_AtualizarParaRealizada" />
+    <sequenceFlow id="SF_AcessarModulo_Paralelo" sourceRef="Task_AcessarModuloSelecionado" targetRef="GW_Paralelo_GestaoProgramas" />
+    <task id="Task_VerificarCredenciais" name="Verificar Credenciais">
+      <incoming>SF_LoginCredenciais</incoming>
+      <outgoing>SF_Credenciais_GW</outgoing>
+    </task>
+    <task id="Task_LiberarModulos" name="Liberar Módulos (Permissão)">
+      <incoming>SF_GW_Sim_LiberarModulos</incoming>
+      <outgoing>Flow_1o1c5kn</outgoing>
+    </task>
+    <exclusiveGateway id="Gateway_1kas51v">
+      <incoming>Flow_1o1c5kn</incoming>
+      <outgoing>Flow_07498kz</outgoing>
+      <outgoing>Flow_09ee2cl</outgoing>
+      <outgoing>Flow_1swe9b1</outgoing>
+    </exclusiveGateway>
+    <sequenceFlow id="Flow_1o1c5kn" sourceRef="Task_LiberarModulos" targetRef="Gateway_1kas51v" />
+    <sequenceFlow id="Flow_07498kz" sourceRef="Gateway_1kas51v" targetRef="Activity_05zc04o" />
+    <sequenceFlow id="Flow_09ee2cl" sourceRef="Gateway_1kas51v" targetRef="Activity_1m5sanf" />
+    <task id="Task_HistoricoParticipacoes" name="Histórico de Participações">
+      <incoming>SF_GerenciarFontes_Historico</incoming>
+      <incoming>Flow_0frtgdd</incoming>
+      <outgoing>SF_Historico_Out</outgoing>
+      <outgoing>Flow_1d6um4z</outgoing>
+    </task>
+    <task id="Task_DefinirEspecializacoes" name="Definir Especializações">
+      <incoming>SF_GerenciarFontes_Espec</incoming>
+      <incoming>Flow_1slak7w</incoming>
+      <outgoing>SF_Espec_Out</outgoing>
+      <outgoing>Flow_18ehkr1</outgoing>
+    </task>
+    <task id="Task_AtualizarContatos" name="Atualizar Contatos">
+      <incoming>SF_GerenciarFontes_Contatos</incoming>
+      <incoming>Flow_17s99s2</incoming>
+      <outgoing>SF_Contatos_Out</outgoing>
+      <outgoing>Flow_1k8zk2p</outgoing>
+    </task>
+    <sequenceFlow id="Flow_1jjfxhz" sourceRef="Activity_05zc04o" targetRef="Task_CadastroDadosPessoais" />
+    <sequenceFlow id="Flow_1slak7w" sourceRef="Activity_05zc04o" targetRef="Task_DefinirEspecializacoes" />
+    <sequenceFlow id="Flow_17s99s2" sourceRef="Activity_05zc04o" targetRef="Task_AtualizarContatos" />
+    <sequenceFlow id="Flow_0frtgdd" sourceRef="Activity_05zc04o" targetRef="Task_HistoricoParticipacoes" />
+    <task id="Task_CadastroDadosPessoais" name="Cadastro de Dados Pessoais">
+      <incoming>SF_GerenciarFontes_Cadastro</incoming>
+      <incoming>Flow_1jjfxhz</incoming>
+      <outgoing>SF_Cadastro_Out</outgoing>
+      <outgoing>Flow_1arc0sg</outgoing>
+    </task>
+    <task id="Activity_05zc04o" name="Gerenciar Banco de Fontes (Entrevistados)">
+      <incoming>Flow_07498kz</incoming>
+      <outgoing>Flow_1jjfxhz</outgoing>
+      <outgoing>Flow_1slak7w</outgoing>
+      <outgoing>Flow_17s99s2</outgoing>
+      <outgoing>Flow_0frtgdd</outgoing>
+    </task>
+    <task id="Task_AcessarModuloSelecionado" name="Acessar Módulo Selecionado">
+      <incoming>Flow_1swe9b1</incoming>
+      <outgoing>SF_AcessarModulo_Paralelo</outgoing>
+    </task>
+    <sequenceFlow id="Flow_1swe9b1" sourceRef="Gateway_1kas51v" targetRef="Task_AcessarModuloSelecionado" />
+    <parallelGateway id="GW_Paralelo_GestaoProgramas" name="">
+      <incoming>SF_AcessarModulo_Paralelo</incoming>
+      <incoming>Flow_1arc0sg</incoming>
+      <incoming>Flow_18ehkr1</incoming>
+      <incoming>Flow_1k8zk2p</incoming>
+      <incoming>Flow_1d6um4z</incoming>
+      <incoming>Flow_0wq5526</incoming>
+      <incoming>Flow_0xjuku7</incoming>
+      <incoming>Flow_022n8yp</incoming>
+      <outgoing>Flow_00ezbr3</outgoing>
+    </parallelGateway>
+    <sequenceFlow id="Flow_1arc0sg" sourceRef="Task_CadastroDadosPessoais" targetRef="GW_Paralelo_GestaoProgramas" />
+    <sequenceFlow id="Flow_18ehkr1" sourceRef="Task_DefinirEspecializacoes" targetRef="GW_Paralelo_GestaoProgramas" />
+    <sequenceFlow id="Flow_1k8zk2p" sourceRef="Task_AtualizarContatos" targetRef="GW_Paralelo_GestaoProgramas" />
+    <sequenceFlow id="Flow_1d6um4z" sourceRef="Task_HistoricoParticipacoes" targetRef="GW_Paralelo_GestaoProgramas" />
+    <sequenceFlow id="Flow_04qmrv7" sourceRef="Activity_1m5sanf" targetRef="Task_CriacaoProgramas" />
+    <sequenceFlow id="Flow_1wsjpzk" sourceRef="Activity_1m5sanf" targetRef="Task_ManutencaoVeiculos" />
+    <sequenceFlow id="Flow_0naw6hw" sourceRef="Activity_1m5sanf" targetRef="Task_VincularPautasQuadros" />
+    <sequenceFlow id="Flow_0wq5526" sourceRef="Task_CriacaoProgramas" targetRef="GW_Paralelo_GestaoProgramas" />
+    <sequenceFlow id="Flow_0xjuku7" sourceRef="Task_ManutencaoVeiculos" targetRef="GW_Paralelo_GestaoProgramas" />
+    <sequenceFlow id="Flow_022n8yp" sourceRef="Task_VincularPautasQuadros" targetRef="GW_Paralelo_GestaoProgramas" />
+    <dataObjectReference id="DataObjectReference_17kf62d" name="Dados do Programa" dataObjectRef="DataObject_0bef8o8" />
+    <dataObject id="DataObject_0bef8o8" />
+    <task id="Activity_1m5sanf" name="Gerenciar Programas e Pautas">
+      <incoming>Flow_09ee2cl</incoming>
+      <outgoing>Flow_04qmrv7</outgoing>
+      <outgoing>Flow_1wsjpzk</outgoing>
+      <outgoing>Flow_0naw6hw</outgoing>
+      <dataOutputAssociation id="DataOutputAssociation_1q8r8ms">
+        <targetRef>DataObjectReference_17kf62d</targetRef>
+      </dataOutputAssociation>
+    </task>
+    <task id="Task_CriacaoProgramas" name="Criação de Programas">
+      <incoming>SF_GerenciarProgramas_Criacao</incoming>
+      <incoming>Flow_04qmrv7</incoming>
+      <outgoing>SF_Criacao_Out</outgoing>
+      <outgoing>Flow_0wq5526</outgoing>
+    </task>
+    <task id="Task_ManutencaoVeiculos" name="Manutenção de Veículos">
+      <incoming>SF_GerenciarProgramas_Manutencao</incoming>
+      <incoming>Flow_1wsjpzk</incoming>
+      <outgoing>SF_Manutencao_Out</outgoing>
+      <outgoing>Flow_0xjuku7</outgoing>
+    </task>
+    <task id="Task_VincularPautasQuadros" name="Vincular Pautas/Quadros">
+      <incoming>SF_GerenciarProgramas_Vincular</incoming>
+      <incoming>Flow_0naw6hw</incoming>
+      <outgoing>SF_VincularPautas_Out</outgoing>
+      <outgoing>Flow_022n8yp</outgoing>
+    </task>
+    <task id="Task_RegistrarCancelamento" name="Registrar Cancelamento">
+      <incoming>SF_AtualizarCancelada_RegistrarCancelamento</incoming>
+      <outgoing>SF_RegistrarCancelamento_BloquearExclusao</outgoing>
+    </task>
+    <sequenceFlow id="SF_RegistrarMetricas_BloquearExclusao" sourceRef="Task_RegistrarMetricas" targetRef="Task_BloquearExclusaoHistorico" />
+    <sequenceFlow id="SF_RegistrarCancelamento_BloquearExclusao" sourceRef="Task_RegistrarCancelamento" targetRef="Task_BloquearExclusaoHistorico" />
+    <sequenceFlow id="SF_ConsolidarHistorico_RegistrarMetricas" sourceRef="Task_ConsolidarHistorico" targetRef="Task_RegistrarMetricas" />
+    <sequenceFlow id="SF_AtualizarCancelada_RegistrarCancelamento" sourceRef="Task_AtualizarParaCancelada" targetRef="Task_RegistrarCancelamento" />
+    <sequenceFlow id="SF_Selecionar_VincularPrograma" sourceRef="Task_SelecionarEntrevistado" targetRef="Task_VincularProgramaDefinirDataHora" />
+    <task id="Task_GerarEntrevista" name="Gerar Entrevista (Status: Agendada)">
+      <incoming>Flow_00ezbr3</incoming>
+      <outgoing>Flow_1pl7tvb</outgoing>
+      <outgoing>Flow_11ktvvw</outgoing>
+      <dataOutputAssociation id="DA_GerarEntrevista_Agendada">
+        <targetRef>DataObject_EntrevistaAgendada</targetRef>
+      </dataOutputAssociation>
+    </task>
+    <sequenceFlow id="Flow_00ezbr3" sourceRef="GW_Paralelo_GestaoProgramas" targetRef="Task_GerarEntrevista" />
+    <task id="Task_SelecionarEntrevistado" name="Selecionar Entrevistado">
+      <incoming>Flow_1pl7tvb</incoming>
+      <outgoing>SF_Selecionar_VincularPrograma</outgoing>
+    </task>
+    <sequenceFlow id="Flow_1pl7tvb" name="Motor de Busca" sourceRef="Task_GerarEntrevista" targetRef="Task_SelecionarEntrevistado" />
+    <task id="Task_VincularProgramaDefinirDataHora" name="Vincular a Programa / Definir Data/Hora">
+      <incoming>SF_Selecionar_VincularPrograma</incoming>
+      <incoming>Flow_1esaqow</incoming>
+      <outgoing>Flow_0qwub3j</outgoing>
+    </task>
+    <sequenceFlow id="Flow_1esaqow" sourceRef="IntermediateCatch_Cancelamento" targetRef="Task_VincularProgramaDefinirDataHora" />
+    <sequenceFlow id="Flow_0qwub3j" name="Vinculo Entrevistado-Programa" sourceRef="Task_VincularProgramaDefinirDataHora" targetRef="IntermediateCatch_Cancelamento" />
+    <sequenceFlow id="Flow_11ktvvw" sourceRef="Task_GerarEntrevista" targetRef="IntermediateCatch_Cancelamento" />
+    <intermediateCatchEvent id="IntermediateCatch_Cancelamento" name="Notificação de Agendamento">
+      <incoming>Flow_11ktvvw</incoming>
+      <incoming>Flow_0qwub3j</incoming>
+      <outgoing>Flow_1esaqow</outgoing>
+      <outgoing>Flow_0gm3x9m</outgoing>
+      <messageEventDefinition id="MsgDef_Cancelamento" />
+    </intermediateCatchEvent>
+    <intermediateCatchEvent id="Event_144ixp7" name="Data Prevista Chegou?">
+      <incoming>Flow_0gm3x9m</incoming>
+      <outgoing>Flow_1mbq6po</outgoing>
+      <timerEventDefinition id="TimerEventDefinition_1eqkyo4" />
+    </intermediateCatchEvent>
+    <sequenceFlow id="Flow_0gm3x9m" sourceRef="IntermediateCatch_Cancelamento" targetRef="Event_144ixp7" />
+    <sequenceFlow id="Flow_1mbq6po" sourceRef="Event_144ixp7" targetRef="GW_StatusAtualizado" />
+    <exclusiveGateway id="GW_StatusAtualizado" name="Status da Entrevista Atualizado?">
+      <incoming>Flow_1mbq6po</incoming>
+      <outgoing>SF_StatusAtualizado_Realizada</outgoing>
+      <outgoing>Flow_0jhe8xr</outgoing>
+      <outgoing>Flow_1320770</outgoing>
+    </exclusiveGateway>
+    <sequenceFlow id="Flow_0jhe8xr" sourceRef="GW_StatusAtualizado" targetRef="Task_ConsolidarHistorico" />
+    <task id="Task_AtualizarParaRealizada" name="Atualizar para Realizada">
+      <incoming>SF_StatusAtualizado_Realizada</incoming>
+      <incoming>Flow_00ym2u0</incoming>
+    </task>
+    <task id="Task_ConsolidarHistorico" name="Consolidar Histórico (Fonte e Programa)">
+      <incoming>Flow_0jhe8xr</incoming>
+      <outgoing>SF_ConsolidarHistorico_RegistrarMetricas</outgoing>
+    </task>
+    <sequenceFlow id="Flow_1320770" sourceRef="GW_StatusAtualizado" targetRef="Event_0a3de9s" />
+    <sequenceFlow id="Flow_00ym2u0" sourceRef="Event_0a3de9s" targetRef="Task_AtualizarParaRealizada" />
+    <intermediateCatchEvent id="Event_0a3de9s" name="Cancelamento">
+      <incoming>Flow_1320770</incoming>
+      <outgoing>Flow_00ym2u0</outgoing>
+      <conditionalEventDefinition id="ConditionalEventDefinition_0bdflvk">
+        <condition xsi:type="tFormalExpression" />
+      </conditionalEventDefinition>
+    </intermediateCatchEvent>
+    <task id="Task_RegistrarMetricas" name="Registrar Métricas">
+      <incoming>SF_ConsolidarHistorico_RegistrarMetricas</incoming>
+      <outgoing>SF_RegistrarMetricas_BloquearExclusao</outgoing>
+    </task>
+    <task id="Task_BloquearExclusaoHistorico" name="Bloquear Exclusão de Histórico">
+      <incoming>SF_RegistrarMetricas_BloquearExclusao</incoming>
+      <incoming>SF_RegistrarCancelamento_BloquearExclusao</incoming>
+      <outgoing>Flow_0bxvmpb</outgoing>
+    </task>
+    <task id="Task_AtualizarParaCancelada" name="Atualizar para Cancelada">
+      <outgoing>SF_AtualizarCancelada_RegistrarCancelamento</outgoing>
+    </task>
+    <endEvent id="EndEvent_FimSucesso" name="Fim Sucesso">
+      <incoming>Flow_0bxvmpb</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_0bxvmpb" sourceRef="Task_BloquearExclusaoHistorico" targetRef="EndEvent_FimSucesso" />
+  </process>
+  <category id="Category_0ttnu7k">
+    <categoryValue id="CategoryValue_0o607ad" value="Gestão de Fontes" />
+  </category>
+  <category id="Category_0bihpwr">
+    <categoryValue id="CategoryValue_04uzgkj" value="Gestão de Programas" />
+  </category>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Surte">
+    <bpmndi:BPMNPlane id="BPMNPlane_Surte" bpmnElement="Collaboration_Surte">
+      <bpmndi:BPMNShape id="Shape_Pool_Sistema" bpmnElement="Pool_Sistema" isHorizontal="true">
+        <dc:Bounds x="160" y="100" width="2260" height="650" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_Usuario" bpmnElement="Lane_Usuario" isHorizontal="true">
+        <dc:Bounds x="190" y="100" width="2230" height="300" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_Backend" bpmnElement="Lane_Backend" isHorizontal="true">
+        <dc:Bounds x="190" y="400" width="2230" height="350" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_StartEvent_InicioSistema" bpmnElement="StartEvent_InicioSistema">
+        <dc:Bounds x="272" y="157" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="247" y="213" width="85" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_RealizarLogin" bpmnElement="Task_RealizarLogin">
+        <dc:Bounds x="370" y="145" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_GW_PermissaoConcedida" bpmnElement="GW_PermissaoConcedida" isMarkerVisible="true">
+        <dc:Bounds x="585" y="435" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="580" y="406" width="59" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_VerificarCredenciais" bpmnElement="Task_VerificarCredenciais">
+        <dc:Bounds x="370" y="430" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_LiberarModulos" bpmnElement="Task_LiberarModulos">
+        <dc:Bounds x="680" y="430" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1kas51v_di" bpmnElement="Gateway_1kas51v" isMarkerVisible="true">
+        <dc:Bounds x="845" y="435" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_HistoricoParticipacoes" bpmnElement="Task_HistoricoParticipacoes">
+        <dc:Bounds x="1115" y="325" width="130" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_DefinirEspecializacoes" bpmnElement="Task_DefinirEspecializacoes">
+        <dc:Bounds x="1115" y="205" width="130" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_AtualizarContatos" bpmnElement="Task_AtualizarContatos">
+        <dc:Bounds x="1115" y="265" width="130" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CadastroDadosPessoais" bpmnElement="Task_CadastroDadosPessoais">
+        <dc:Bounds x="1115" y="145" width="130" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0i9u9mw_di" bpmnElement="Activity_05zc04o">
+        <dc:Bounds x="890" y="215" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_AcessarModuloSelecionado" bpmnElement="Task_AcessarModuloSelecionado">
+        <dc:Bounds x="935" y="430" width="130" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_GW_Paralelo_GestaoProgramas" bpmnElement="GW_Paralelo_GestaoProgramas">
+        <dc:Bounds x="1305" y="435" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObjectReference_17kf62d_di" bpmnElement="DataObjectReference_17kf62d">
+        <dc:Bounds x="992" y="653" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="985" y="704" width="49" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1m5sanf_di" bpmnElement="Activity_1m5sanf">
+        <dc:Bounds x="960" y="550" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_CriacaoProgramas" bpmnElement="Task_CriacaoProgramas">
+        <dc:Bounds x="1125" y="551" width="130" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_ManutencaoVeiculos" bpmnElement="Task_ManutencaoVeiculos">
+        <dc:Bounds x="1125" y="611" width="130" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_VincularPautasQuadros" bpmnElement="Task_VincularPautasQuadros">
+        <dc:Bounds x="1125" y="671" width="130" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_RegistrarCancelamento" bpmnElement="Task_RegistrarCancelamento">
+        <dc:Bounds x="2145" y="430" width="130" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_GerarEntrevista" bpmnElement="Task_GerarEntrevista">
+        <dc:Bounds x="1405" y="430" width="130" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_SelecionarEntrevistado" bpmnElement="Task_SelecionarEntrevistado">
+        <dc:Bounds x="1405" y="225" width="130" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_VincularProgramaDefinirDataHora" bpmnElement="Task_VincularProgramaDefinirDataHora">
+        <dc:Bounds x="1575" y="225" width="130" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_IntermediateCatch_Cancelamento" bpmnElement="IntermediateCatch_Cancelamento">
+        <dc:Bounds x="1622" y="442" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1605" y="485" width="70" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_003w4cs_di" bpmnElement="Event_144ixp7">
+        <dc:Bounds x="1722" y="442" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1707" y="485" width="67" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_GW_StatusAtualizado" bpmnElement="GW_StatusAtualizado" isMarkerVisible="true">
+        <dc:Bounds x="1815" y="455" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1851" y="520" width="58" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_AtualizarParaRealizada" bpmnElement="Task_AtualizarParaRealizada">
+        <dc:Bounds x="1885" y="180" width="130" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_ConsolidarHistorico" bpmnElement="Task_ConsolidarHistorico">
+        <dc:Bounds x="1775" y="606" width="130" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0l03j3w_di" bpmnElement="Event_0a3de9s">
+        <dc:Bounds x="1932" y="462" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1915" y="505" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_RegistrarMetricas" bpmnElement="Task_RegistrarMetricas">
+        <dc:Bounds x="1970" y="606" width="120" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_BloquearExclusaoHistorico" bpmnElement="Task_BloquearExclusaoHistorico">
+        <dc:Bounds x="2145" y="606" width="130" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_AtualizarParaCancelada" bpmnElement="Task_AtualizarParaCancelada">
+        <dc:Bounds x="2145" y="180" width="130" height="60" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_FimSucesso" bpmnElement="EndEvent_FimSucesso">
+        <dc:Bounds x="2332" y="618" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2318" y="662" width="64" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_SF_InicioLogin" bpmnElement="SF_InicioLogin">
+        <di:waypoint x="308" y="175" />
+        <di:waypoint x="370" y="175" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_LoginCredenciais" bpmnElement="SF_LoginCredenciais">
+        <di:waypoint x="430" y="205" />
+        <di:waypoint x="430" y="430" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="440" y="283" width="59" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_Credenciais_GW" bpmnElement="SF_Credenciais_GW">
+        <di:waypoint x="490" y="460" />
+        <di:waypoint x="585" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_GW_Sim_LiberarModulos" bpmnElement="SF_GW_Sim_LiberarModulos">
+        <di:waypoint x="635" y="460" />
+        <di:waypoint x="680" y="460" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="641" y="443" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_GW_Nao_AcessoNegado" bpmnElement="SF_GW_Nao_AcessoNegado">
+        <di:waypoint x="610" y="485" />
+        <di:waypoint x="610" y="570" />
+        <di:waypoint x="350" y="570" />
+        <di:waypoint x="350" y="190" />
+        <di:waypoint x="370" y="190" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="615" y="515" width="21" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_StatusAtualizado_Realizada" bpmnElement="SF_StatusAtualizado_Realizada">
+        <di:waypoint x="1840" y="455" />
+        <di:waypoint x="1840" y="210" />
+        <di:waypoint x="1885" y="210" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1855" y="295" width="49" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_AcessarModulo_Paralelo" bpmnElement="SF_AcessarModulo_Paralelo">
+        <di:waypoint x="1065" y="460" />
+        <di:waypoint x="1305" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1o1c5kn_di" bpmnElement="Flow_1o1c5kn">
+        <di:waypoint x="800" y="460" />
+        <di:waypoint x="845" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_07498kz_di" bpmnElement="Flow_07498kz">
+        <di:waypoint x="870" y="435" />
+        <di:waypoint x="870" y="255" />
+        <di:waypoint x="890" y="255" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_09ee2cl_di" bpmnElement="Flow_09ee2cl">
+        <di:waypoint x="870" y="485" />
+        <di:waypoint x="870" y="590" />
+        <di:waypoint x="960" y="590" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1jjfxhz_di" bpmnElement="Flow_1jjfxhz">
+        <di:waypoint x="940" y="215" />
+        <di:waypoint x="940" y="170" />
+        <di:waypoint x="1115" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1slak7w_di" bpmnElement="Flow_1slak7w">
+        <di:waypoint x="990" y="255" />
+        <di:waypoint x="1058" y="255" />
+        <di:waypoint x="1058" y="230" />
+        <di:waypoint x="1115" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_17s99s2_di" bpmnElement="Flow_17s99s2">
+        <di:waypoint x="990" y="255" />
+        <di:waypoint x="1058" y="255" />
+        <di:waypoint x="1058" y="290" />
+        <di:waypoint x="1115" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0frtgdd_di" bpmnElement="Flow_0frtgdd">
+        <di:waypoint x="940" y="295" />
+        <di:waypoint x="940" y="350" />
+        <di:waypoint x="1115" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1swe9b1_di" bpmnElement="Flow_1swe9b1">
+        <di:waypoint x="895" y="460" />
+        <di:waypoint x="935" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1arc0sg_di" bpmnElement="Flow_1arc0sg">
+        <di:waypoint x="1245" y="170" />
+        <di:waypoint x="1330" y="170" />
+        <di:waypoint x="1330" y="435" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_18ehkr1_di" bpmnElement="Flow_18ehkr1">
+        <di:waypoint x="1245" y="230" />
+        <di:waypoint x="1330" y="230" />
+        <di:waypoint x="1330" y="435" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1k8zk2p_di" bpmnElement="Flow_1k8zk2p">
+        <di:waypoint x="1245" y="290" />
+        <di:waypoint x="1330" y="290" />
+        <di:waypoint x="1330" y="435" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1d6um4z_di" bpmnElement="Flow_1d6um4z">
+        <di:waypoint x="1245" y="350" />
+        <di:waypoint x="1330" y="350" />
+        <di:waypoint x="1330" y="435" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_04qmrv7_di" bpmnElement="Flow_04qmrv7">
+        <di:waypoint x="1060" y="590" />
+        <di:waypoint x="1093" y="590" />
+        <di:waypoint x="1093" y="568" />
+        <di:waypoint x="1125" y="568" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1wsjpzk_di" bpmnElement="Flow_1wsjpzk">
+        <di:waypoint x="1060" y="590" />
+        <di:waypoint x="1093" y="590" />
+        <di:waypoint x="1093" y="636" />
+        <di:waypoint x="1125" y="636" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0naw6hw_di" bpmnElement="Flow_0naw6hw">
+        <di:waypoint x="1060" y="590" />
+        <di:waypoint x="1093" y="590" />
+        <di:waypoint x="1093" y="696" />
+        <di:waypoint x="1125" y="696" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0wq5526_di" bpmnElement="Flow_0wq5526">
+        <di:waypoint x="1255" y="576" />
+        <di:waypoint x="1330" y="576" />
+        <di:waypoint x="1330" y="485" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0xjuku7_di" bpmnElement="Flow_0xjuku7">
+        <di:waypoint x="1255" y="636" />
+        <di:waypoint x="1330" y="636" />
+        <di:waypoint x="1330" y="485" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_022n8yp_di" bpmnElement="Flow_022n8yp">
+        <di:waypoint x="1255" y="696" />
+        <di:waypoint x="1330" y="696" />
+        <di:waypoint x="1330" y="485" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_RegistrarMetricas_BloquearExclusao" bpmnElement="SF_RegistrarMetricas_BloquearExclusao">
+        <di:waypoint x="2090" y="636" />
+        <di:waypoint x="2145" y="636" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_RegistrarCancelamento_BloquearExclusao" bpmnElement="SF_RegistrarCancelamento_BloquearExclusao">
+        <di:waypoint x="2210" y="490" />
+        <di:waypoint x="2210" y="606" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_ConsolidarHistorico_RegistrarMetricas" bpmnElement="SF_ConsolidarHistorico_RegistrarMetricas">
+        <di:waypoint x="1905" y="636" />
+        <di:waypoint x="1970" y="636" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_AtualizarCancelada_RegistrarCancelamento" bpmnElement="SF_AtualizarCancelada_RegistrarCancelamento">
+        <di:waypoint x="2210" y="240" />
+        <di:waypoint x="2210" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_SF_Selecionar_VincularPrograma" bpmnElement="SF_Selecionar_VincularPrograma">
+        <di:waypoint x="1535" y="255" />
+        <di:waypoint x="1575" y="255" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1487" y="223" width="84" height="53" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_00ezbr3_di" bpmnElement="Flow_00ezbr3">
+        <di:waypoint x="1355" y="460" />
+        <di:waypoint x="1405" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1pl7tvb_di" bpmnElement="Flow_1pl7tvb">
+        <di:waypoint x="1470" y="430" />
+        <di:waypoint x="1470" y="285" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1481" y="343" width="78" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1esaqow_di" bpmnElement="Flow_1esaqow">
+        <di:waypoint x="1640" y="442" />
+        <di:waypoint x="1640" y="285" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0qwub3j_di" bpmnElement="Flow_0qwub3j">
+        <di:waypoint x="1640" y="285" />
+        <di:waypoint x="1640" y="442" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1657" y="340" width="65" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_11ktvvw_di" bpmnElement="Flow_11ktvvw">
+        <di:waypoint x="1535" y="460" />
+        <di:waypoint x="1622" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0gm3x9m_di" bpmnElement="Flow_0gm3x9m">
+        <di:waypoint x="1658" y="460" />
+        <di:waypoint x="1722" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1mbq6po_di" bpmnElement="Flow_1mbq6po">
+        <di:waypoint x="1758" y="460" />
+        <di:waypoint x="1787" y="460" />
+        <di:waypoint x="1787" y="480" />
+        <di:waypoint x="1815" y="480" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0jhe8xr_di" bpmnElement="Flow_0jhe8xr">
+        <di:waypoint x="1840" y="505" />
+        <di:waypoint x="1840" y="606" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1320770_di" bpmnElement="Flow_1320770">
+        <di:waypoint x="1865" y="480" />
+        <di:waypoint x="1932" y="480" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_00ym2u0_di" bpmnElement="Flow_00ym2u0">
+        <di:waypoint x="1950" y="462" />
+        <di:waypoint x="1950" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0bxvmpb_di" bpmnElement="Flow_0bxvmpb">
+        <di:waypoint x="2275" y="636" />
+        <di:waypoint x="2332" y="636" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Group_0s2n6df_di" bpmnElement="Group_0s2n6df">
+        <dc:Bounds x="850" y="130" width="420" height="260" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1016" y="137" width="88" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Group_04h2j51_di" bpmnElement="Group_04h2j51">
+        <dc:Bounds x="950" y="505" width="350" height="230" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1098" y="512" width="54" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_108nif1_di" bpmnElement="TextAnnotation_108nif1">
+        <dc:Bounds x="1670" y="680" width="99.99274099883856" height="40.65040650406504" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_1xgo48y_di" bpmnElement="TextAnnotation_1xgo48y">
+        <dc:Bounds x="2010" y="770" width="99.99274099883856" height="69.68641114982579" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_1q8r8ms_di" bpmnElement="DataOutputAssociation_1q8r8ms">
+        <di:waypoint x="1009" y="630" />
+        <di:waypoint x="1009" y="653" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_0ootbih_di" bpmnElement="Association_0ootbih">
+        <di:waypoint x="1781" y="665" />
+        <di:waypoint x="1751" y="680" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_09sdmph_di" bpmnElement="Association_09sdmph">
+        <di:waypoint x="2180" y="666" />
+        <di:waypoint x="2075" y="770" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>
