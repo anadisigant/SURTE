@@ -48,7 +48,7 @@ Localizados no diretório `app/db/scripts/`:
 Localizados no diretório `docs/`:
 
 * **Modelo Entidade-Relacionamento (MER):** Disponibilizado em formato bruto estruturado (`mer-surt.xml`), formato nativo de modelagem (`mer-surt.brM3`) e exportado para leitura direta em imagem (`mer-surt.png`).
-![Modelo Entidade-Relacionamento do Banco de Dados SURTE](docs/mer-surt.png)
+![Modelo Entidade-Relacionamento do Banco de Dados SURTE](/docs/mer-surt.png)
 * **Mapeamento de Processos:** Fluxograma de processos operacionais salvo no padrão de mercado BPMN (`processo_surte.bpmn`) e exportado em formato rasterizado (`processo_surte.png`).
   
-![Fluxograma do Processo Operacional SURTE](docs/processo_surte.png)
+![Fluxograma do Processo Operacional SURTE](/docs/processo_surte.png)
