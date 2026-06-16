@@ -136,4 +136,4 @@ bandit-report.json
 # ==========================================
 # Volumes locais mapeados para dentro do projeto
 docker-data/
-# Nota: .dockerignore pertence ao repositório — não ignorar
+# Nota: .dockerignore pertence ao repositório — não ignorarprojeto.md
