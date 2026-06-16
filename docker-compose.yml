@@ -13,6 +13,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # Pasta onde ficam seus scripts de criação do banco
       - ./database/scripts:/docker-entrypoint-initdb.d
       
   backend:
@@ -25,7 +26,7 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/surte_db
-      - SECRET_KEY=chave_super_secreta_gerada_aqui
+      - SECRET_KEY=sua_chave_super_secreta_gerada_aqui
     depends_on:
       - db
 

@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
+
+# Importação de todas as rotas da V1
 from app.api.v1.routers import auth, entrevistados, programas, usuarios, entrevistas
 
 app = FastAPI(
