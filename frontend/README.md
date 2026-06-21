@@ -17,7 +17,7 @@ npm run dev
 ```
 
 ## Estrutura do Projeto
-- `src/components/` - componentes reutilizáveis (incluindo `ui/` e `figma/`)
+- `src/components/` - componentes reutilizáveis (incluindo `ui/`)
 - `src/pages/` - páginas/rotas principais
 - `src/services/api.js` - cliente HTTP (Axios) pré-configurado
 - `src/styles/` - arquivos de estilização global e tema do sistema
