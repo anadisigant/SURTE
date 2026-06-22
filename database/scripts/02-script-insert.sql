@@ -4,7 +4,7 @@
 -- ----------------------------------------------------------------------------
 INSERT INTO usuarios (nome_completo, email, senha_hash, cargo, ativo) VALUES
 -- Administrador
-('Carlos Admin',            'admin@surte.com',          '$2b$12$MekCrmmG4QoIjlFhfwMxpuE3IkWqoWwZZiZMNGzfoKqzw49i.cjte', 'admin',         true),
+('Carlos Admin',            'admin@surte.com',          '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WZKpN', 'admin',                true),
 -- Produtores
 ('Mariana Produtora',       'mariana.p@surte.com',       '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WZKpN', 'produtor',             true),
 ('Felipe Produtor',         'felipe.p@surte.com',        '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WZKpN', 'produtor',             true),
