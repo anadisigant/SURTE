@@ -35,7 +35,7 @@ async def listar_agenda(
     """
     service = EntrevistaService(db)
     entrevistas = await service.listar_agenda(data=data, programa_id=programa_id)
-    return {"status": "success", "data": entrevistas}
+    return entrevistas
 
 
 @router.get("/{id}", response_model=EntrevistaDetalheResponse, summary="Detalhes de uma entrevista")
@@ -50,7 +50,7 @@ async def buscar_entrevista(
     """
     service = EntrevistaService(db)
     entrevista = await service.buscar_detalhe(id)
-    return {"status": "success", "data": entrevista}
+    return entrevista
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Agendar entrevista")
