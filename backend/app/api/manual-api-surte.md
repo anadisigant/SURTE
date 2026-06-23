@@ -16,7 +16,7 @@ Obtém o token JWT.
 | Key | Value |
 |-----|-------|
 | username | admin@surte.com |
-| password | senha123 |
+| password | admin123 |
 
 **Resposta esperada (200):**
 ```json
