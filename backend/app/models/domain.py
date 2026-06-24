@@ -55,8 +55,7 @@ class Entrevista(Base):
     entrevistado_id = Column(Integer, ForeignKey("entrevistados.id", ondelete="RESTRICT"), nullable=False)
     programa_id = Column(Integer, ForeignKey("programas.id", ondelete="RESTRICT"), nullable=False)
     usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="RESTRICT"), nullable=False)
-    data_hora_inicio = Column(DateTime(timezone=True), index=True, nullable=False)
-    data_hora_fim = Column(DateTime(timezone=True), nullable=False)
+    data_hora = Column(DateTime(timezone=True), index=True, nullable=False)
     
     # Aqui é onde o erro estava dando. Agora a classe EntrevistaStatus existe lá em cima!
     status = Column(Enum(EntrevistaStatus), default=EntrevistaStatus.agendada)

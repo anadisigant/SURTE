@@ -24,8 +24,7 @@ class EntrevistaService:
         for e in entrevistas:
             resultado.append({
                 "id": e.id,
-                "data_hora_inicio": e.data_hora_inicio,
-                "data_hora_fim": e.data_hora_fim,
+                "data_hora": e.data_hora,
                 "status": e.status,
                 "notas": e.notas,
                 "entrevistado_id": e.entrevistado_id,

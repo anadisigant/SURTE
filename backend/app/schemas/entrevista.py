@@ -9,8 +9,7 @@ from app.schemas.entrevistado import EntrevistadoResponse
 class EntrevistaBase(BaseModel):
     entrevistado_id: int
     programa_id: int
-    data_hora_inicio: datetime
-    data_hora_fim: datetime
+    data_hora: datetime
     notas: Optional[str] = None
 
 class EntrevistaCreate(EntrevistaBase):
@@ -29,8 +28,7 @@ class EntrevistaResponse(EntrevistaBase):
 class EntrevistaListResponse(BaseModel):
     """Schema simplificado para a listagem da agenda."""
     id: int
-    data_hora_inicio: datetime
-    data_hora_fim: datetime
+    data_hora: datetime
     status: EntrevistaStatus
     notas: Optional[str] = None
     entrevistado_id: int

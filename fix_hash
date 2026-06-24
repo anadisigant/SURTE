@@ -1,0 +1,15 @@
+import asyncio, os
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy import text
+
+HASH = "\\\/zZkD3Vu7Ce"
+
+async def update():
+    engine = create_async_engine(os.environ['DATABASE_URL'])
+    async with AsyncSession(engine) as s:
+        await s.execute(text('UPDATE usuarios SET senha_hash = :h WHERE email = :e'), {'h': HASH, 'e': 'admin@surte.com'})
+        await s.commit()
+        result = await s.execute(text("SELECT LENGTH(senha_hash) as tam FROM usuarios WHERE email = 'admin@surte.com'"))
+        print('Tamanho salvo:', result.scalar())
+
+asyncio.run(update())

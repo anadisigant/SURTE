@@ -50,7 +50,7 @@ async def buscar_entrevista(
     """
     service = EntrevistaService(db)
     entrevista = await service.buscar_detalhe(id)
-    return entrevista
+    return {"status": "success", "data": entrevista}
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Agendar entrevista")

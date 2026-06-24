@@ -47,7 +47,7 @@ class EntrevistaRepository:
         if data:
             # Filtra todas as entrevistas que começam no dia informado
             from sqlalchemy import cast, Date
-            filtros.append(cast(Entrevista.data_hora_inicio, Date) == data)
+            filtros.append(cast(Entrevista.data_hora, Date) == data)
 
         if programa_id:
             filtros.append(Entrevista.programa_id == programa_id)
@@ -56,7 +56,7 @@ class EntrevistaRepository:
             stmt = stmt.where(and_(*filtros))
 
         # Ordena por data/hora de início por padrão
-        stmt = stmt.order_by(Entrevista.data_hora_inicio)
+        stmt = stmt.order_by(Entrevista.data_hora)
 
         result = await self.db.execute(stmt)
         return result.scalars().all()
@@ -71,8 +71,7 @@ class EntrevistaRepository:
             Entrevista.status == EntrevistaStatus.agendada,
             # Lógica de sobreposição de intervalos: Início1 < Fim2 AND Fim1 > Início2
             and_(
-                Entrevista.data_hora_inicio < fim,
-                Entrevista.data_hora_fim > inicio
+                Entrevista.data_hora < fim,
             )
         )
         result = await self.db.execute(stmt)
