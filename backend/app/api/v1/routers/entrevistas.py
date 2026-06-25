@@ -1,6 +1,6 @@
 # app/api/v1/routers/entrevistas.py
 from datetime import date
-from typing import Optional, List
+from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,8 +8,6 @@ from app.api.dependencies import get_db, get_current_user
 from app.models.domain import Usuario
 from app.schemas.entrevista import (
     EntrevistaCreate,
-    EntrevistaListResponse,
-    EntrevistaDetalheResponse,
     TransicaoStatus,
 )
 from app.services.entrevista_service import EntrevistaService
@@ -17,37 +15,24 @@ from app.services.entrevista_service import EntrevistaService
 router = APIRouter()
 
 
-@router.get("/", response_model=List[EntrevistaListResponse], summary="Listar agenda de entrevistas")
+@router.get("/", summary="Listar agenda de entrevistas")
 async def listar_agenda(
     data: Optional[date] = Query(None, description="Filtrar por data (formato: YYYY-MM-DD)"),
     programa_id: Optional[int] = Query(None, description="Filtrar por ID do programa"),
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
-    """
-    Retorna a listagem da agenda de entrevistas.
-
-    Filtros disponíveis (todos opcionais):
-    - **data**: filtra entrevistas que iniciam no dia informado.
-    - **programa_id**: filtra entrevistas vinculadas a um programa específico.
-
-    O resultado é ordenado por data/hora de início.
-    """
     service = EntrevistaService(db)
     entrevistas = await service.listar_agenda(data=data, programa_id=programa_id)
-    return entrevistas
+    return {"status": "success", "data": entrevistas}
 
 
-@router.get("/{id}", response_model=EntrevistaDetalheResponse, summary="Detalhes de uma entrevista")
+@router.get("/{id}", summary="Detalhes de uma entrevista")
 async def buscar_entrevista(
     id: int,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
-    """
-    Retorna os detalhes completos de uma entrevista pelo seu ID,
-    incluindo os dados completos do **programa** e do **entrevistado** vinculados.
-    """
     service = EntrevistaService(db)
     entrevista = await service.buscar_detalhe(id)
     return {"status": "success", "data": entrevista}
@@ -55,8 +40,8 @@ async def buscar_entrevista(
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Agendar entrevista")
 async def agendar_entrevista(
-    payload: EntrevistaCreate, 
-    db: AsyncSession = Depends(get_db), 
+    payload: EntrevistaCreate,
+    db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
     service = EntrevistaService(db)
@@ -66,9 +51,9 @@ async def agendar_entrevista(
 
 @router.patch("/{id}/status", status_code=status.HTTP_200_OK, summary="Atualizar status da entrevista")
 async def atualizar_status_entrevista(
-    id: int, 
-    payload: TransicaoStatus, 
-    db: AsyncSession = Depends(get_db), 
+    id: int,
+    payload: TransicaoStatus,
+    db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
     service = EntrevistaService(db)
