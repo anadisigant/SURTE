@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:14
+    container_name: surte_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: surte_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Pasta onde ficam seus scripts de criação do banco
+      - ./database/scripts:/docker-entrypoint-initdb.d
+      
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: surte_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/surte_db
+      - SECRET_KEY=sua_chave_super_secreta_gerada_aqui
+    depends_on:
+      - db
+
+volumes:
+  pgdata:
