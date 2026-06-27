@@ -1,40 +1,63 @@
-from fastapi import APIRouter, Depends, status
+# app/api/v1/routers/entrevistados.py
+from typing import Optional, List
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from app.api.dependencies import get_db, get_current_user
-from app.models.domain import Usuario, Entrevistado
-from pydantic import BaseModel
-from fastapi import HTTPException
 
-class EntrevistadoCreateDTO(BaseModel):
-    nome_completo: str
-    area_atuacao: str
-    temas: str
-    email: str = None
-    autorizacao_imagem_voz: bool = False
+from app.api.dependencies import get_db, get_current_user
+from app.models.domain import Usuario
+from app.schemas.entrevistado import EntrevistadoCreate, EntrevistadoUpdate, EntrevistadoResponse
+from app.services.entrevistado_service import EntrevistadoService
 
 router = APIRouter()
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
-async def criar_entrevistado(
-    payload: EntrevistadoCreateDTO,
-    db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
-):
-    db_obj = Entrevistado(**payload.model_dump())
-    db.add(db_obj)
-    await db.commit()
-    await db.refresh(db_obj)
-    return db_obj
 
-@router.get("/{id}", status_code=status.HTTP_200_OK)
+@router.get("/", response_model=List[EntrevistadoResponse], summary="Buscar fontes com filtros")
+async def buscar_entrevistados(
+    nome: Optional[str] = Query(None, description="Filtrar por nome (busca parcial)"),
+    area_atuacao: Optional[str] = Query(None, description="Filtrar por área de atuação (busca parcial)"),
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    service = EntrevistadoService(db)
+    return await service.buscar(nome=nome, area_atuacao=area_atuacao)
+
+
+@router.post("/", status_code=status.HTTP_201_CREATED, summary="Cadastrar fonte")
+async def criar_entrevistado(
+    payload: EntrevistadoCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    service = EntrevistadoService(db)
+    return await service.criar(payload.model_dump())
+
+
+@router.get("/{id}", response_model=EntrevistadoResponse, summary="Obter fonte por ID")
 async def obter_entrevistado(
     id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
+    current_user: Usuario = Depends(get_current_user),
 ):
-    result = await db.execute(select(Entrevistado).filter(Entrevistado.id == id, Entrevistado.ativo == True))
-    entrevistado = result.scalars().first()
-    if not entrevistado:
-        raise HTTPException(status_code=404, detail=f"Entrevistado ID {id} não encontrado ou inativo.")
-    return entrevistado
+    service = EntrevistadoService(db)
+    return await service.obter(id)
+
+
+@router.patch("/{id}", response_model=EntrevistadoResponse, summary="Atualizar dados da fonte")
+async def atualizar_entrevistado(
+    id: int,
+    payload: EntrevistadoUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    service = EntrevistadoService(db)
+    return await service.atualizar(id, payload.model_dump(exclude_none=True))
+
+
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT, summary="Inativar fonte (soft delete)")
+async def inativar_entrevistado(
+    id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    service = EntrevistadoService(db)
+    await service.inativar(id)

@@ -1,21 +1,43 @@
-from sqlalchemy.orm import Session
+# app/services/entrevistado_service.py
+from typing import Optional
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 from app.repositories.entrevistado_repository import EntrevistadoRepository
 
 class EntrevistadoService:
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
+        self.db = db
         self.repository = EntrevistadoRepository(db)
 
-    def criar(self, dados: dict):
-        # Validações de negócio (ex: checar se e-mail já existe) poderiam vir aqui
-        return self.repository.create(dados)
+    async def buscar(self, nome: Optional[str] = None, area_atuacao: Optional[str] = None):
+        return await self.repository.buscar(nome=nome, area_atuacao=area_atuacao)
 
-    def obter(self, id: int):
-        entrevistado = self.repository.get_active_by_id(id)
+    async def obter(self, id: int):
+        entrevistado = await self.repository.get_by_id(id)
         if not entrevistado:
-            # Erros de negócio são formatados aqui para a controller interceptar
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, 
+                status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Entrevistado ID {id} não encontrado ou inativo."
             )
         return entrevistado
+
+    async def criar(self, dados: dict):
+        return await self.repository.create(dados)
+
+    async def atualizar(self, id: int, dados: dict):
+        entrevistado = await self.repository.get_by_id(id)
+        if not entrevistado:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Entrevistado ID {id} não encontrado ou inativo."
+            )
+        return await self.repository.update(entrevistado, dados)
+
+    async def inativar(self, id: int):
+        entrevistado = await self.repository.get_by_id(id)
+        if not entrevistado:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Entrevistado ID {id} não encontrado ou inativo."
+            )
+        await self.repository.soft_delete(entrevistado)
