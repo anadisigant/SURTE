@@ -137,3 +137,24 @@ bandit-report.json
 # Volumes locais mapeados para dentro do projeto
 docker-data/
 # Nota: .dockerignore pertence ao repositório — não ignorarprojeto.md
+
+# ==========================================
+# 13. NODE.JS / FRONTEND
+# ==========================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+.eslintcache
+.vite/
+.parcel-cache/
+.next/
+out/
+.nuxt/
+.svelte-kit/
+dist/
+build/
+.yarn/
+.pnp.*
