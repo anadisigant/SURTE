@@ -5,6 +5,7 @@ import {
   History,
   FileText,
   Settings,
+  LogOut,
   X,
 } from "lucide-react";
 import { NavLink } from "react-router";
@@ -18,7 +19,7 @@ const menuItems = [
   { icon: Settings, label: "Configurações", path: "/configuracoes" },
 ];
 
-export default function Sidebar({ isOpen, onClose }) {
+export default function Sidebar({ isOpen, onClose, onLogout }) {
   return (
     <>
       {/* Overlay para mobile */}
@@ -75,7 +76,6 @@ export default function Sidebar({ isOpen, onClose }) {
           ))}
         </nav>
 
-        {/* User Profile */}
         <div className="p-4 border-t border-white/10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[var(--surte-amarelo-destaque)] flex items-center justify-center text-[var(--surte-azul-escuro)] font-bold">
@@ -86,6 +86,14 @@ export default function Sidebar({ isOpen, onClose }) {
               <p className="text-white/60 text-xs">admin@surte.com</p>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-white bg-white/10 hover:bg-white/20 transition-colors text-sm font-medium"
+          >
+            <LogOut size={16} />
+            Sair
+          </button>
         </div>
       </aside>
     </>

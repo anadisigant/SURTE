@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router";
 import { useState } from "react";
 import Sidebar from "./components/Sidebar";
 import MobileHeader from "./components/MobileHeader";
+import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Entrevistados from "./pages/Entrevistados";
 import Agendamentos from "./pages/Agendamentos";
@@ -11,11 +12,26 @@ import Configuracoes from "./pages/Configuracoes";
 
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [token, setToken] = useState(() => localStorage.getItem("surte_token"));
+
+  const handleLogout = () => {
+    localStorage.removeItem("surte_token");
+    setToken(null);
+    setSidebarOpen(false);
+  };
+
+  if (!token) {
+    return <Login onLogin={setToken} />;
+  }
 
   return (
     <BrowserRouter>
       <div className="flex h-screen bg-gray-50">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          onLogout={handleLogout}
+        />
         <main className="flex-1 overflow-y-auto w-full">
           <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
           <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">

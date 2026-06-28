@@ -32,6 +32,7 @@ class EntrevistaRepository:
         self,
         data: Optional[date] = None,
         programa_id: Optional[int] = None,
+        status: Optional[EntrevistaStatus] = None,
     ) -> list[Entrevista]:
         """
         Lista entrevistas com filtros opcionais por data e/ou programa,
@@ -51,6 +52,9 @@ class EntrevistaRepository:
 
         if programa_id:
             filtros.append(Entrevista.programa_id == programa_id)
+
+        if status:
+            filtros.append(Entrevista.status == status)
 
         if filtros:
             stmt = stmt.where(and_(*filtros))

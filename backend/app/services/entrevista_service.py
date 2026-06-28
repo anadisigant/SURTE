@@ -1,18 +1,29 @@
-# app/services/entrevista_service.py
 from datetime import date
 from typing import Optional
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from fastapi import HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.domain import EntrevistaStatus
 from app.repositories.entrevista_repository import EntrevistaRepository
-from app.models.domain import EntrevistaStatus, Participacao
+
 
 class EntrevistaService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repository = EntrevistaRepository(db)
 
-    async def listar_agenda(self, data: Optional[date] = None, programa_id: Optional[int] = None):
-        entrevistas = await self.repository.listar_agenda(data=data, programa_id=programa_id)
+    async def listar_agenda(
+        self,
+        data: Optional[date] = None,
+        programa_id: Optional[int] = None,
+        status: Optional[EntrevistaStatus] = None,
+    ):
+        entrevistas = await self.repository.listar_agenda(
+            data=data,
+            programa_id=programa_id,
+            status=status,
+        )
         resultado = []
         for e in entrevistas:
             resultado.append({
@@ -33,7 +44,7 @@ class EntrevistaService:
         if not entrevista:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Entrevista não encontrada."
+                detail="Entrevista nao encontrada."
             )
         return entrevista
 
@@ -47,25 +58,28 @@ class EntrevistaService:
         if not entrevista:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Entrevista não encontrada."
+                detail="Entrevista nao encontrada."
             )
 
-        if entrevista.status != EntrevistaStatus.agendada:
+        transicoes_permitidas = {
+            EntrevistaStatus.agendada: [EntrevistaStatus.confirmada, EntrevistaStatus.cancelada],
+            EntrevistaStatus.confirmada: [EntrevistaStatus.realizada, EntrevistaStatus.cancelada],
+        }
+
+        status_permitidos = transicoes_permitidas.get(entrevista.status, [])
+
+        if not status_permitidos:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Não é possível alterar o status de uma entrevista que já está '{entrevista.status.value}'."
+                detail=f"Nao e possivel alterar o status de uma entrevista que ja esta '{entrevista.status.value}'."
             )
 
-        if novo_status not in [EntrevistaStatus.realizada, EntrevistaStatus.cancelada]:
+        if novo_status not in status_permitidos:
+            permitidos = ", ".join(status.value for status in status_permitidos)
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Uma entrevista agendada só pode ser alterada para 'realizada' ou 'cancelada'."
+                detail=f"Uma entrevista '{entrevista.status.value}' so pode ser alterada para: {permitidos}."
             )
 
         entrevista.status = novo_status
-
-        if novo_status == EntrevistaStatus.realizada:
-            nova_participacao = Participacao(entrevista_id=entrevista.id)
-            self.db.add(nova_participacao)
-
         return await self.repository.update(entrevista)
