@@ -177,7 +177,7 @@ export default function Entrevistados() {
   return (
     <div>
       {notification && (
-        <div className="fixed right-4 top-4 z-[70] w-[calc(100%-2rem)] max-w-sm rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800 shadow-lg">
+        <div className="fixed left-1/2 top-4 z-[70] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-center text-green-800 shadow-lg">
           <p className="font-medium">{notification.message}</p>
         </div>
       )}

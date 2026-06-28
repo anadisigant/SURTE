@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, Clock, FileText, Plus, Tv, User, X } from "lucide-react";
+import { Calendar, Clock, FileText, Plus, Tv, X } from "lucide-react";
 import api from "../services/api";
 
 const initialForm = {
@@ -116,7 +116,7 @@ export default function Agendamentos() {
   const entrevistasOrdenadas = useMemo(
     () =>
       entrevistas
-        .filter((entrevista) => entrevista.status !== "realizada")
+        .filter((entrevista) => !["realizada", "cancelada"].includes(entrevista.status))
         .sort((a, b) => a.timestamp - b.timestamp),
     [entrevistas],
   );
@@ -306,16 +306,6 @@ export default function Agendamentos() {
                       <div className="min-w-0">
                         <p className="text-xs text-gray-500">Horario</p>
                         <p className="font-medium text-sm">{entrevista.hora}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <User size={16} className="text-[var(--surte-bege-claro)] flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs text-gray-500">IDs</p>
-                        <p className="font-medium text-sm truncate">
-                          E{entrevista.entrevistado_id} / P{entrevista.programa_id}
-                        </p>
                       </div>
                     </div>
 
