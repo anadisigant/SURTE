@@ -1,17 +1,22 @@
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+import asyncio
+import sys
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
+
 from app.core.config import settings
 
-# Criação da engine assíncrona
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 engine = create_async_engine(settings.DATABASE_URL, echo=False)
 
-# Configuração da fábrica de sessões assíncronas (Singleton)
 AsyncSessionLocal = async_sessionmaker(
-    bind=engine, 
-    class_=AsyncSession, 
-    expire_on_commit=False, # Evita expiração prematura dos objetos após o commit
-    autocommit=False, 
-    autoflush=False
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
 )
 
 Base = declarative_base()

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_db, get_current_user
-from app.models.domain import Usuario
+from app.models.domain import EntrevistaStatus, Usuario
 from app.schemas.entrevista import (
     EntrevistaCreate,
     TransicaoStatus,
@@ -19,11 +19,12 @@ router = APIRouter()
 async def listar_agenda(
     data: Optional[date] = Query(None, description="Filtrar por data (formato: YYYY-MM-DD)"),
     programa_id: Optional[int] = Query(None, description="Filtrar por ID do programa"),
+    status: Optional[EntrevistaStatus] = Query(None, description="Filtrar por status"),
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
     service = EntrevistaService(db)
-    entrevistas = await service.listar_agenda(data=data, programa_id=programa_id)
+    entrevistas = await service.listar_agenda(data=data, programa_id=programa_id, status=status)
     return {"status": "success", "data": entrevistas}
 
 
