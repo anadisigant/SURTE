@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 
 # Importação de todas as rotas da V1
-from app.api.v1.routers import auth, entrevistados, programas, usuarios, entrevistas
+from app.api.v1.routers import auth, entrevistados, programas, usuarios, entrevistas, relatorios
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -25,7 +25,9 @@ app.include_router(entrevistados.router, prefix=f"{settings.API_V1_STR}/entrevis
 app.include_router(programas.router, prefix=f"{settings.API_V1_STR}/programas", tags=["Programas"])
 app.include_router(usuarios.router, prefix=f"{settings.API_V1_STR}/usuarios", tags=["Usuários"])
 app.include_router(entrevistas.router, prefix=f"{settings.API_V1_STR}/entrevistas", tags=["Entrevistas"])
+app.include_router(relatorios.router, prefix=f"{settings.API_V1_STR}/relatorios", tags=["Relatórios"])
 
 @app.get("/")
 def health_check():
     return {"status": "ok", "message": "API SURTE Completa e Operante"}
+

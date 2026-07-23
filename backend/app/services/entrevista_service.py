@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import EntrevistaStatus
+from app.models.domain import EntrevistaStatus, Participacao
 from app.repositories.entrevista_repository import EntrevistaRepository
 
 
@@ -51,10 +51,26 @@ class EntrevistaService:
     async def agendar(self, dados: dict, usuario_id: int):
         dados["usuario_id"] = usuario_id
         dados["status"] = EntrevistaStatus.agendada
+
+        from datetime import timedelta
+        inicio = dados["data_hora"]
+        fim = inicio + timedelta(hours=1)
+
+        conflito = await self.repository.check_conflito_agenda(
+            entrevistado_id=dados["entrevistado_id"],
+            inicio=inicio,
+            fim=fim
+        )
+        if conflito:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="O entrevistado já possui uma entrevista agendada que sobrepõe este horário."
+            )
+
         return await self.repository.create(dados)
 
-    async def atualizar_status(self, id: int, novo_status: EntrevistaStatus):
-        entrevista = await self.repository.get_by_id(id)
+    async def atualizar_status(self, id: int, novo_status: EntrevistaStatus, usuario_id: Optional[int] = None):
+        entrevista = await self.repository.get_by_id_com_detalhes(id)
         if not entrevista:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -80,6 +96,21 @@ class EntrevistaService:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Uma entrevista '{entrevista.status.value}' so pode ser alterada para: {permitidos}."
             )
+
+        if novo_status == EntrevistaStatus.realizada:
+            # Gerar Participacao automaticamente no historico
+            nome_entrevistado = entrevista.entrevistado.nome_completo if entrevista.entrevistado else "Fonte"
+            participacao = Participacao(
+                entrevista_id=entrevista.id,
+                entrevistado_id=entrevista.entrevistado_id,
+                programa_id=entrevista.programa_id,
+                usuario_id=usuario_id if usuario_id is not None else entrevista.usuario_id,
+                data_hora=entrevista.data_hora,
+                duracao_minutos=60, # 1 hora padrão
+                tema_abordado=entrevista.notes if hasattr(entrevista, 'notes') and entrevista.notes else (entrevista.notas if entrevista.notas else f"Entrevista com {nome_entrevistado}"),
+                observacoes="Gerada automaticamente a partir do agendamento realizado."
+            )
+            self.db.add(participacao)
 
         entrevista.status = novo_status
         return await self.repository.update(entrevista)
