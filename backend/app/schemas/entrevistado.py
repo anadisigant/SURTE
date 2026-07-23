@@ -18,3 +18,12 @@ class EntrevistadoResponse(EntrevistadoBase):
     ativo: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+class EntrevistadoUpdate(BaseModel):
+    nome_completo: Optional[str] = None
+    telefone: Optional[str] = None
+    email: Optional[EmailStr] = None
+    area_atuacao: Optional[str] = None
+    instituicao: Optional[str] = None
+    temas: Optional[str] = None
+    autorizacao_imagem_voz: Optional[bool] = None
