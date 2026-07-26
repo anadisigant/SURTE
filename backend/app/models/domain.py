@@ -68,6 +68,18 @@ class Entrevista(Base):
 class Participacao(Base):
     __tablename__ = "participacoes"
     id = Column(Integer, primary_key=True, index=True)
-    entrevista_id = Column(Integer, ForeignKey("entrevistas.id", ondelete="RESTRICT"), nullable=False, unique=True)
+    entrevista_id = Column(Integer, ForeignKey("entrevistas.id", ondelete="SET NULL"), nullable=True)
+    entrevistado_id = Column(Integer, ForeignKey("entrevistados.id", ondelete="RESTRICT"), nullable=False)
+    programa_id = Column(Integer, ForeignKey("programas.id", ondelete="RESTRICT"), nullable=False)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="RESTRICT"), nullable=False)
+    data_hora = Column(DateTime(timezone=True), nullable=False)
+    duracao_minutos = Column(Integer, nullable=True)
+    tema_abordado = Column(Text, nullable=False)
+    audiencia_estimada = Column(Integer, nullable=True)
+    observacoes = Column(Text, nullable=True)
     criado_em = Column(DateTime(timezone=True), server_default=func.now())
+
     entrevista = relationship("Entrevista")
+    entrevistado = relationship("Entrevistado")
+    programa = relationship("Programa")
+    usuario = relationship("Usuario")

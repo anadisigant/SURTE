@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import and_
 from sqlalchemy.orm import selectinload
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 from app.models.domain import Entrevista, EntrevistaStatus
 
@@ -67,15 +67,17 @@ class EntrevistaRepository:
 
     async def check_conflito_agenda(self, entrevistado_id: int, inicio, fim) -> bool:
         """
-        Verifica se existe sobreposição de horários para entrevistas AGENDADAS
+        Verifica se existe sobreposição de horários para entrevistas agendadas ou confirmadas
         do mesmo entrevistado. Retorna True se houver conflito.
         """
         stmt = select(Entrevista).where(
             Entrevista.entrevistado_id == entrevistado_id,
-            Entrevista.status == EntrevistaStatus.agendada,
+            Entrevista.status.in_([EntrevistaStatus.agendada, EntrevistaStatus.confirmada]),
             # Lógica de sobreposição de intervalos: Início1 < Fim2 AND Fim1 > Início2
+            # Onde cada entrevista dura 1 hora: Fim1 = Entrevista.data_hora + 1 hora
             and_(
                 Entrevista.data_hora < fim,
+                Entrevista.data_hora > (inicio - timedelta(hours=1))
             )
         )
         result = await self.db.execute(stmt)

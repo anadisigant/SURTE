@@ -58,5 +58,5 @@ async def atualizar_status_entrevista(
     current_user: Usuario = Depends(get_current_user),
 ):
     service = EntrevistaService(db)
-    entrevista = await service.atualizar_status(id, payload.status)
+    entrevista = await service.atualizar_status(id, payload.status, current_user.id)
     return {"status": "success", "data": entrevista}
