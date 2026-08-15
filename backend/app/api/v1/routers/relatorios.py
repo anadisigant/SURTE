@@ -12,7 +12,12 @@ from sqlalchemy.orm import selectinload
 
 from app.api.dependencies import get_db, get_current_user
 from app.models.domain import Participacao, Usuario
-from app.schemas.relatorio import AreaMes, ParticipacaoMes, RelatoriosResponse
+from app.schemas.relatorio import (
+    AreaMes,
+    DetalheParticipacao,
+    ParticipacaoMes,
+    RelatoriosResponse,
+)
 
 router = APIRouter()
 
@@ -55,7 +60,12 @@ async def obter_relatorios(
     Se nenhum parâmetro for informado, retorna todos os registros.
     """
     # Construir a consulta base
-    stmt = select(Participacao).options(selectinload(Participacao.entrevistado))
+    # selectinload de entrevistado e programa: precisamos dos nomes, não só
+    # dos ids, tanto para os agregados por área quanto para o detalhamento.
+    stmt = select(Participacao).options(
+        selectinload(Participacao.entrevistado),
+        selectinload(Participacao.programa),
+    )
     logging.info("Query built with data_inicio=%s data_fim=%s", data_inicio, data_fim)
 
     if data_inicio:
@@ -111,4 +121,25 @@ async def obter_relatorios(
         for (area, ano, mes), info in sorted(mapa_area_mes.items())
     ]
 
-    return RelatoriosResponse(participacoes=participacoes_chart, areas=areas_chart)
+    # Detalhamento linha a linha: uma entrada por participação, já com os
+    # nomes de entrevistado e programa resolvidos (não só os ids), para os
+    # relatórios que precisam listar quem foi entrevistado e em qual programa.
+    detalhes: List[DetalheParticipacao] = [
+        DetalheParticipacao(
+            id=p.id,
+            data=p.data_hora.strftime("%d/%m/%Y"),
+            data_referencia=p.data_hora.date(),
+            nome_entrevistado=p.entrevistado.nome_completo if p.entrevistado else "—",
+            area_atuacao=p.entrevistado.area_atuacao if p.entrevistado else "—",
+            nome_programa=p.programa.nome if p.programa else "—",
+            tema_abordado=p.tema_abordado,
+        )
+        for p in sorted(participacoes, key=lambda x: x.data_hora)
+        if p.data_hora
+    ]
+
+    return RelatoriosResponse(
+        participacoes=participacoes_chart,
+        areas=areas_chart,
+        detalhes=detalhes,
+    )

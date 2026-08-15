@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Download, FileText, TrendingUp, Users } from "lucide-react";
@@ -24,26 +24,90 @@ const PALETA_MESES = [
   "var(--surte-marrom)",
 ];
 
-// Converte o formato "longo" que a API retorna (uma linha por área+mês)
-// para o formato "largo" que o Recharts precisa (uma linha por área,
-// com uma coluna por mês). Também devolve a lista de meses encontrados,
-// na ordem em que apareceram, para montar as <Bar> e colunas dinamicamente.
-function pivotAreasPorMes(areasLongFormato) {
-  const mapaAreas = new Map();
+// Pivota uma lista "longa" (uma linha por grupo+mês) para o formato "largo"
+// que o Recharts/tabelas precisam (uma linha por grupo, uma coluna por mês).
+// Genérica: recebe qual campo do objeto representa o grupo (area, entrevistado, programa...).
+function pivotPorCampoEMes(linhasLongFormato, campoGrupo) {
+  const mapa = new Map();
   const meses = [];
 
-  areasLongFormato.forEach(({ area, mes, total }) => {
+  linhasLongFormato.forEach((item) => {
+    const grupo = item[campoGrupo];
+    const mes = item.mes;
     if (!meses.includes(mes)) meses.push(mes);
-    if (!mapaAreas.has(area)) mapaAreas.set(area, { area });
-    mapaAreas.get(area)[mes] = total;
+    if (!mapa.has(grupo)) mapa.set(grupo, { [campoGrupo]: grupo });
+    mapa.get(grupo)[mes] = item.total;
   });
 
-  return { linhas: Array.from(mapaAreas.values()), meses };
+  return { linhas: Array.from(mapa.values()), meses };
 }
+
+// Mantido por compatibilidade com o resto do componente (gráfico de área
+// usa a chave "area" especificamente).
+function pivotAreasPorMes(areasLongFormato) {
+  return pivotPorCampoEMes(areasLongFormato, "area");
+}
+
+// Nomes abreviados dos meses em português, na mesma convenção usada pelo
+// backend (month_label em relatorios.py), para agrupar o detalhamento
+// (que vem com data "dd/mm/aaaa") por mês no cliente.
+const MESES_PT = [
+  "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+  "Jul", "Ago", "Set", "Out", "Nov", "Dez",
+];
+
+// Agrupa a lista de entrevistas detalhadas (uma linha por participação) por
+// um campo (nome do programa ou do entrevistado) e por mês, contando quantas
+// entrevistas houve em cada combinação. Formato de saída compatível com
+// pivotPorCampoEMes, para reaproveitar a mesma tabela/gráfico em "long format".
+function agruparDetalhesPorCampoEMes(detalhes, campo, rotuloGrupo) {
+  const mapa = new Map();
+  detalhes.forEach((d) => {
+    const [, mesNum, ano] = d.data.split("/").map(Number);
+    if (!mesNum || !ano) return;
+    const mesLabel = `${MESES_PT[mesNum - 1]}/${ano}`;
+    const grupo = d[campo] || "—";
+    const chave = `${grupo}|${mesLabel}`;
+    if (!mapa.has(chave)) {
+      mapa.set(chave, { [rotuloGrupo]: grupo, mes: mesLabel, total: 0 });
+    }
+    mapa.get(chave).total += 1;
+  });
+  return Array.from(mapa.values());
+}
+
+// Configuração de cada tipo de relatório agregado (Entrevistados/Programas):
+// diz qual campo agrupar, como rotular colunas e qual cor de cabeçalho usar
+// no PDF -- isso é o que garante que os dois relatórios saiam diferentes.
+const TIPO_AGREGACAO = {
+  Entrevistados: {
+    campo: "nome_entrevistado",
+    rotulo: "entrevistado",
+    rotuloColuna: "Entrevistado",
+    titulo: "Relatório por Entrevistado",
+    cor: [234, 88, 12], // laranja
+  },
+  Programas: {
+    campo: "nome_programa",
+    rotulo: "programa",
+    rotuloColuna: "Programa",
+    titulo: "Relatório por Programa",
+    cor: [92, 64, 51], // marrom
+  },
+};
+
+// Datasets "simples" (sem agregação por campo) usados pelos tipos
+// Participações e Completo.
+const TIPO_DATASETS_SIMPLES = {
+  Participações: { participacoes: true, areas: false, detalhes: false },
+  Completo: { participacoes: true, areas: true, detalhes: true },
+};
 
 // Função pura, fora do componente: não depende de closures do useEffect.
 // Recebe os dados atuais como parâmetro sempre que é chamada.
-function exportPdf(participacoes, areasLongFormato) {
+// `detalhes` é a lista linha-a-linha (uma por participação) com nome do
+// entrevistado e do programa já resolvidos pelo backend.
+function exportPdf(participacoes, areasLongFormato, detalhes = []) {
   const doc = new jsPDF();
 
   // Cabeçalho
@@ -77,7 +141,7 @@ function exportPdf(participacoes, areasLongFormato) {
     cursorY += 10;
   }
 
-  // Tabela: Evolução por área (colunas de mês dinâmicas, não mais fixas em Abril/Maio)
+  // Tabela: Evolução por área (colunas de mês dinâmicas)
   if (areasLongFormato.length > 0) {
     const { linhas, meses } = pivotAreasPorMes(areasLongFormato);
 
@@ -93,12 +157,115 @@ function exportPdf(participacoes, areasLongFormato) {
       headStyles: { fillColor: [234, 88, 12] }, // laranja
       margin: { left: 14, right: 14 },
     });
+
+    cursorY = doc.lastAutoTable.finalY + 12;
   } else {
     doc.setFontSize(10);
     doc.text("Nenhum dado de áreas disponível.", 14, cursorY);
+    cursorY += 10;
+  }
+
+  // Tabela: Entrevistas detalhadas (nome do entrevistado + programa por linha)
+  if (detalhes.length > 0) {
+    if (cursorY > 250) {
+      doc.addPage();
+      cursorY = 20;
+    }
+
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.text("Entrevistas Realizadas", 14, cursorY);
+
+    autoTable(doc, {
+      startY: cursorY + 4,
+      head: [["Data", "Entrevistado", "Programa", "Área", "Tema"]],
+      body: detalhes.map((d) => [
+        d.data,
+        d.nome_entrevistado,
+        d.nome_programa,
+        d.area_atuacao,
+        d.tema_abordado || "",
+      ]),
+      theme: "striped",
+      headStyles: { fillColor: [21, 128, 61] }, // verde
+      styles: { fontSize: 8 },
+      margin: { left: 14, right: 14 },
+    });
   }
 
   doc.save("relatorio_geral.pdf");
+}
+
+// PDF específico para relatórios agregados (Entrevistados / Programas).
+// Recebe o objeto `agregado` montado em buscarDadosPersonalizados, que já
+// carrega título, cor e campo de agrupamento -- por isso o PDF sai
+// estruturalmente diferente para cada tipo (colunas, ordenação e cor mudam).
+function exportPdfPorCampo(agregado) {
+  const { linhas, meses, rotulo, rotuloColuna, titulo, cor, campo, detalhesOrdenados } = agregado;
+  const doc = new jsPDF();
+
+  doc.setFontSize(16);
+  doc.text(titulo, 14, 18);
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  doc.text(`Gerado em ${new Date().toLocaleDateString("pt-BR")}`, 14, 24);
+
+  let cursorY = 32;
+
+  // Tabela 1: pivot Grupo x Mês, com coluna de total
+  doc.setFontSize(12);
+  doc.setTextColor(0);
+  doc.text(`Total de Entrevistas por ${rotuloColuna} e Mês`, 14, cursorY);
+
+  autoTable(doc, {
+    startY: cursorY + 4,
+    head: [[rotuloColuna, ...meses, "Total"]],
+    body: linhas.map((r) => {
+      const valoresMes = meses.map((m) => r[m] ?? 0);
+      const total = valoresMes.reduce((a, b) => a + b, 0);
+      return [r[rotulo], ...valoresMes, total];
+    }),
+    theme: "striped",
+    headStyles: { fillColor: cor },
+    margin: { left: 14, right: 14 },
+  });
+
+  cursorY = doc.lastAutoTable.finalY + 12;
+
+  // Tabela 2: detalhamento, ordenado pelo campo do relatório, com a outra
+  // dimensão (programa <-> entrevistado) aparecendo como coluna de apoio.
+  if (detalhesOrdenados && detalhesOrdenados.length > 0) {
+    if (cursorY > 250) {
+      doc.addPage();
+      cursorY = 20;
+    }
+
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.text("Entrevistas Detalhadas", 14, cursorY);
+
+    const outroCampoLabel = campo === "nome_entrevistado" ? "Programa" : "Entrevistado";
+    const outroCampoKey = campo === "nome_entrevistado" ? "nome_programa" : "nome_entrevistado";
+
+    autoTable(doc, {
+      startY: cursorY + 4,
+      head: [[rotuloColuna, "Data", outroCampoLabel, "Área", "Tema"]],
+      body: detalhesOrdenados.map((d) => [
+        d[campo],
+        d.data,
+        d[outroCampoKey],
+        d.area_atuacao,
+        d.tema_abordado || "",
+      ]),
+      theme: "striped",
+      headStyles: { fillColor: cor },
+      styles: { fontSize: 8 },
+      margin: { left: 14, right: 14 },
+    });
+  }
+
+  const sufixoArquivo = campo === "nome_entrevistado" ? "por_entrevistado" : "por_programa";
+  doc.save(`relatorio_${sufixoArquivo}.pdf`);
 }
 
 // Rótulos de coluna amigáveis por chave de dado.
@@ -106,11 +273,18 @@ const COLUNAS_LABEL = {
   mes: "Mês",
   total: "Total de Participações",
   area: "Área",
+  programa: "Programa",
+  entrevistado: "Entrevistado",
+  data: "Data",
+  nome_entrevistado: "Entrevistado",
+  nome_programa: "Programa",
+  area_atuacao: "Área de Atuação",
+  tema_abordado: "Tema Abordado",
 };
 
 // Colunas que existem no dado bruto mas não fazem sentido no CSV
 // (são só metadado interno usado para filtrar/ordenar).
-const COLUNAS_OCULTAS = ["data_referencia"];
+const COLUNAS_OCULTAS = ["data_referencia", "id"];
 
 function rotuloColuna(chave) {
   if (COLUNAS_LABEL[chave]) return COLUNAS_LABEL[chave];
@@ -166,16 +340,6 @@ function exportExcel(data, name) {
   URL.revokeObjectURL(url);
 }
 
-// Mapeia cada opção do seletor "Tipo de Relatório" para os datasets
-// disponíveis hoje via /relatorios. "Programas" ainda não tem endpoint
-// próprio (existe o modelo no backend, mas /relatorios não o expõe).
-const TIPO_DATASETS = {
-  Entrevistados: { participacoes: true, areas: false },
-  Participações: { participacoes: true, areas: false },
-  Programas: { participacoes: false, areas: false },
-  Completo: { participacoes: true, areas: true },
-};
-
 // Busca os relatórios na API, opcionalmente filtrados por período.
 // O filtro agora acontece no servidor -- o frontend só repassa as datas.
 async function buscarRelatorios(dataInicio, dataFim) {
@@ -187,12 +351,14 @@ async function buscarRelatorios(dataInicio, dataFim) {
   return {
     participacoes: response.data.participacoes || [],
     areas: response.data.areas || [],
+    detalhes: response.data.detalhes || [],
   };
 }
 
 export default function Relatorios() {
   const [dadosParticipacoes, setDadosParticipacoes] = useState([]);
   const [dadosAreas, setDadosAreas] = useState([]); // formato longo, como vem da API
+  const [dadosDetalhes, setDadosDetalhes] = useState([]); // uma linha por participação
   const [loading, setLoading] = useState(true);
 
   // Estado do formulário de relatório personalizado
@@ -206,14 +372,26 @@ export default function Relatorios() {
   // Estado do preview (guarda os dados já buscados/filtrados no servidor)
   const [previewAberto, setPreviewAberto] = useState(false);
   const [previewCarregando, setPreviewCarregando] = useState(false);
-  const [previewDados, setPreviewDados] = useState({ participacoes: [], areas: [] });
+  const [previewDados, setPreviewDados] = useState({
+    participacoes: [],
+    areas: [],
+    detalhes: [],
+    agregado: null,
+  });
+
+  // Referências usadas pelo card "Por Período": como esse relatório depende
+  // de datas que só o usuário sabe, o card não exporta nada sozinho — ele
+  // leva o usuário até o formulário de filtro e foca a Data Inicial.
+  const filtroRef = useRef(null);
+  const dataInicialInputRef = useRef(null);
 
   // Carrega os dados sem filtro para os gráficos e cards do topo
   useEffect(() => {
     buscarRelatorios()
-      .then(({ participacoes, areas }) => {
+      .then(({ participacoes, areas, detalhes }) => {
         setDadosParticipacoes(participacoes);
         setDadosAreas(areas);
+        setDadosDetalhes(detalhes);
         setLoading(false);
       })
       .catch((error) => {
@@ -241,16 +419,46 @@ export default function Relatorios() {
     return true;
   }
 
-  // Busca no servidor já filtrado, e aplica o recorte por Tipo de Relatório
+  // Busca no servidor já filtrado, e aplica o recorte por Tipo de Relatório.
+  // Para "Entrevistados" e "Programas" isso agora agrega de verdade (pivot
+  // por campo + mês, mais o detalhamento ordenado por esse campo) -- é o que
+  // garante que os dois relatórios saiam diferentes um do outro.
   async function buscarDadosPersonalizados() {
-    const { participacoes, areas } = await buscarRelatorios(
+    const { participacoes, areas, detalhes } = await buscarRelatorios(
       filtroDataInicial,
       filtroDataFinal
     );
-    const datasets = TIPO_DATASETS[filtroTipo] || TIPO_DATASETS.Completo;
+
+    const configAgregacao = TIPO_AGREGACAO[filtroTipo];
+    if (configAgregacao) {
+      const longFormato = agruparDetalhesPorCampoEMes(
+        detalhes,
+        configAgregacao.campo,
+        configAgregacao.rotulo
+      );
+      const { linhas, meses } = pivotPorCampoEMes(longFormato, configAgregacao.rotulo);
+
+      const detalhesOrdenados = [...detalhes].sort((a, b) => {
+        const campoA = a[configAgregacao.campo] || "";
+        const campoB = b[configAgregacao.campo] || "";
+        if (campoA !== campoB) return campoA.localeCompare(campoB, "pt-BR");
+        return (a.data || "").localeCompare(b.data || "");
+      });
+
+      return {
+        participacoes: [],
+        areas: [],
+        detalhes: [],
+        agregado: { ...configAgregacao, linhas, meses, detalhesOrdenados },
+      };
+    }
+
+    const datasets = TIPO_DATASETS_SIMPLES[filtroTipo] || TIPO_DATASETS_SIMPLES.Completo;
     return {
       participacoes: datasets.participacoes ? participacoes : [],
       areas: datasets.areas ? areas : [],
+      detalhes: datasets.detalhes ? detalhes : [],
+      agregado: null,
     };
   }
 
@@ -258,23 +466,39 @@ export default function Relatorios() {
     if (!validarPeriodo()) return;
     setGerando(true);
     try {
-      const { participacoes, areas } = await buscarDadosPersonalizados();
+      const { participacoes, areas, detalhes, agregado } = await buscarDadosPersonalizados();
 
-      if (participacoes.length === 0 && areas.length === 0) {
+      const semDados = agregado
+        ? agregado.linhas.length === 0
+        : participacoes.length === 0 && areas.length === 0 && detalhes.length === 0;
+
+      if (semDados) {
         setErroFiltro("Nenhum dado encontrado para os filtros selecionados.");
         return;
       }
       setErroFiltro("");
 
       if (filtroFormato === "PDF") {
-        exportPdf(participacoes, areas);
+        if (agregado) {
+          exportPdfPorCampo(agregado);
+        } else {
+          exportPdf(participacoes, areas, detalhes);
+        }
       } else {
         // Excel e CSV usam o mesmo gerador (CSV com separador ";", que o Excel abre nativamente)
-        if (participacoes.length > 0) {
-          exportExcel(participacoes, "participacoes_personalizado");
-        }
-        if (areas.length > 0) {
-          exportExcel(areas, "areas_personalizado");
+        if (agregado) {
+          const sufixo = agregado.campo === "nome_entrevistado" ? "por_entrevistado" : "por_programa";
+          exportExcel(agregado.linhas, `${sufixo}_personalizado`);
+        } else {
+          if (participacoes.length > 0) {
+            exportExcel(participacoes, "participacoes_personalizado");
+          }
+          if (areas.length > 0) {
+            exportExcel(areas, "areas_personalizado");
+          }
+          if (detalhes.length > 0) {
+            exportExcel(detalhes, "entrevistas_personalizado");
+          }
         }
       }
     } catch (error) {
@@ -302,6 +526,62 @@ export default function Relatorios() {
     }
   }
 
+  // Card "Por Entrevistado": agrega as entrevistas por entrevistado e mês
+  // (quantas entrevistas cada um deu), em vez de listar todas as linhas cruas.
+  function handleExportarPorEntrevistado() {
+    const agregado = agruparDetalhesPorCampoEMes(
+      dadosDetalhes,
+      "nome_entrevistado",
+      "entrevistado"
+    );
+    if (agregado.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+    exportExcel(agregado, "por_entrevistado_report");
+  }
+
+  // Card "Por Programa": agrega as entrevistas por programa e mês.
+  function handleExportarPorPrograma() {
+    const agregado = agruparDetalhesPorCampoEMes(
+      dadosDetalhes,
+      "nome_programa",
+      "programa"
+    );
+    if (agregado.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+    exportExcel(agregado, "por_programa_report");
+  }
+
+  // Card "Por Período": não dá pra gerar nada sem o usuário escolher as
+  // datas, então em vez de exportar dados "genéricos" o card rola a tela até
+  // o formulário de filtro e foca o campo de Data Inicial.
+  function handleIrParaFiltroPeriodo() {
+    filtroRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    dataInicialInputRef.current?.focus();
+  }
+
+  // Exporta exatamente os dados que o gráfico "Participações por Mês" mostra.
+  function handleExportarParticipacoes() {
+    if (dadosParticipacoes.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+    exportExcel(dadosParticipacoes, "participacoes_por_mes");
+  }
+
+  // Exporta exatamente os dados (já pivotados) que o gráfico "Evolução por
+  // Área" mostra.
+  function handleExportarAreas() {
+    if (linhasAreas.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+    exportExcel(linhasAreas, "evolucao_por_area");
+  }
+
   return (
     <div>
       <div className="mb-6 sm:mb-8">
@@ -323,7 +603,7 @@ export default function Relatorios() {
             Todos os entrevistados e participações
           </p>
           <button
-            onClick={() => exportPdf(dadosParticipacoes, dadosAreas)}
+            onClick={() => exportPdf(dadosParticipacoes, dadosAreas, dadosDetalhes)}
             className="flex items-center justify-center gap-2 bg-white text-[var(--surte-azul-primario)] px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors text-xs sm:text-sm font-medium w-full sm:w-auto"
           >
             <Download size={14} className="sm:w-4 sm:h-4" />
@@ -337,10 +617,10 @@ export default function Relatorios() {
             Por Entrevistado
           </h3>
           <p className="text-xs sm:text-sm opacity-80 mb-3 sm:mb-4">
-            Histórico individual detalhado
+            Quantas entrevistas cada entrevistado deu, por mês
           </p>
           <button
-            onClick={() => exportExcel(dadosAreas, "areas_report")}
+            onClick={handleExportarPorEntrevistado}
             className="flex items-center justify-center gap-2 bg-white text-[var(--surte-laranja-principal)] px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors text-xs sm:text-sm font-medium w-full sm:w-auto"
           >
             <Download size={14} className="sm:w-4 sm:h-4" />
@@ -354,25 +634,24 @@ export default function Relatorios() {
             Por Período
           </h3>
           <p className="text-xs sm:text-sm opacity-80 mb-3 sm:mb-4">
-            Análise temporal de entrevistas
+            Escolha as datas para gerar o relatório do intervalo
           </p>
           <button
-            onClick={() => exportPdf(dadosParticipacoes, dadosAreas)}
+            onClick={handleIrParaFiltroPeriodo}
             className="flex items-center justify-center gap-2 bg-white text-[var(--surte-marrom)] px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors text-xs sm:text-sm font-medium w-full sm:w-auto"
           >
-            <Download size={14} className="sm:w-4 sm:h-4" />
-            Exportar PDF
+            Escolher período
           </button>
         </div>
 
         <div className="bg-gradient-to-br from-[var(--surte-marrom)] to-[var(--surte-bege-claro)] rounded-lg p-4 sm:p-6 text-white">
           <FileText size={28} className="sm:w-8 sm:h-8 mb-3 opacity-80" />
-          <h3 className="text-base sm:text-lg font-semibold mb-1">Por Área</h3>
+          <h3 className="text-base sm:text-lg font-semibold mb-1">Por Programa</h3>
           <p className="text-xs sm:text-sm opacity-80 mb-3 sm:mb-4">
-            Distribuição por área de atuação
+            Quantas entrevistas cada programa realizou, por mês
           </p>
           <button
-            onClick={() => exportExcel(dadosParticipacoes, "participacoes_report")}
+            onClick={handleExportarPorPrograma}
             className="flex items-center justify-center gap-2 bg-white text-[var(--surte-marrom)] px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors text-xs sm:text-sm font-medium w-full sm:w-auto"
           >
             <Download size={14} className="sm:w-4 sm:h-4" />
@@ -388,7 +667,10 @@ export default function Relatorios() {
             <h2 className="text-lg sm:text-xl font-bold text-[var(--surte-azul-escuro)]">
               Participações por Mês
             </h2>
-            <button className="text-xs sm:text-sm text-[var(--surte-azul-primario)] hover:underline font-medium">
+            <button
+              onClick={handleExportarParticipacoes}
+              className="text-xs sm:text-sm text-[var(--surte-azul-primario)] hover:underline font-medium"
+            >
               Exportar
             </button>
           </div>
@@ -425,7 +707,10 @@ export default function Relatorios() {
             <h2 className="text-lg sm:text-xl font-bold text-[var(--surte-azul-escuro)]">
               Evolução por Área
             </h2>
-            <button className="text-xs sm:text-sm text-[var(--surte-azul-primario)] hover:underline font-medium">
+            <button
+              onClick={handleExportarAreas}
+              className="text-xs sm:text-sm text-[var(--surte-azul-primario)] hover:underline font-medium"
+            >
               Exportar
             </button>
           </div>
@@ -459,7 +744,59 @@ export default function Relatorios() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-100">
+      {/* Tabela: Entrevistas detalhadas (nome do entrevistado + programa) */}
+      <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-100 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg sm:text-xl font-bold text-[var(--surte-azul-escuro)]">
+            Entrevistas Realizadas
+          </h2>
+          <button
+            onClick={() => exportExcel(dadosDetalhes, "entrevistas_detalhadas")}
+            className="text-xs sm:text-sm text-[var(--surte-azul-primario)] hover:underline font-medium"
+          >
+            Exportar
+          </button>
+        </div>
+        {loading ? (
+          <div className="h-[150px] flex items-center justify-center bg-gray-50 rounded-lg animate-pulse">
+            <span className="text-sm text-gray-400">Carregando dados...</span>
+          </div>
+        ) : dadosDetalhes.length === 0 ? (
+          <div className="h-[150px] flex items-center justify-center bg-gray-50 rounded-lg border border-dashed border-gray-200">
+            <span className="text-sm text-gray-500">Nenhum dado disponível</span>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border border-gray-100 rounded-lg overflow-hidden">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left px-3 py-2 font-medium text-gray-600">Data</th>
+                  <th className="text-left px-3 py-2 font-medium text-gray-600">Entrevistado</th>
+                  <th className="text-left px-3 py-2 font-medium text-gray-600">Programa</th>
+                  <th className="text-left px-3 py-2 font-medium text-gray-600">Área</th>
+                  <th className="text-left px-3 py-2 font-medium text-gray-600">Tema</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dadosDetalhes.map((d) => (
+                  <tr key={d.id} className="border-t border-gray-100">
+                    <td className="px-3 py-2 whitespace-nowrap">{d.data}</td>
+                    <td className="px-3 py-2">{d.nome_entrevistado}</td>
+                    <td className="px-3 py-2">{d.nome_programa}</td>
+                    <td className="px-3 py-2">{d.area_atuacao}</td>
+                    <td className="px-3 py-2">{d.tema_abordado}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div
+        ref={filtroRef}
+        className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-100 scroll-mt-6"
+      >
         <h2 className="text-lg sm:text-xl font-bold text-[var(--surte-azul-escuro)] mb-4">
           Gerar Relatório Personalizado
         </h2>
@@ -473,10 +810,10 @@ export default function Relatorios() {
               onChange={(e) => setFiltroTipo(e.target.value)}
               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--surte-azul-primario)]"
             >
-              <option>Entrevistados</option>
-              <option>Participações</option>
-              <option>Programas</option>
-              <option>Completo</option>
+              <option value="Entrevistados">Por Entrevistado</option>
+              <option value="Participações">Participações por Mês</option>
+              <option value="Programas">Por Programa</option>
+              <option value="Completo">Completo</option>
             </select>
           </div>
           <div>
@@ -484,6 +821,7 @@ export default function Relatorios() {
               Data Inicial
             </label>
             <input
+              ref={dataInicialInputRef}
               type="date"
               value={filtroDataInicial}
               onChange={(e) => setFiltroDataInicial(e.target.value)}
@@ -567,9 +905,11 @@ function PreviewModal({
   onFechar,
   onBaixar,
 }) {
-  const { participacoes, areas } = dados;
+  const { participacoes = [], areas = [], detalhes = [], agregado = null } = dados;
   const { linhas: linhasAreas, meses: mesesAreas } = pivotAreasPorMes(areas);
-  const semDados = participacoes.length === 0 && areas.length === 0;
+  const semDados = agregado
+    ? agregado.linhas.length === 0
+    : participacoes.length === 0 && areas.length === 0 && detalhes.length === 0;
 
   return (
     <div
@@ -616,7 +956,102 @@ function PreviewModal({
                 </p>
               )}
 
-              {participacoes.length > 0 && (
+              {/* Preview do relatório agregado (Por Entrevistado / Por Programa) */}
+              {agregado && agregado.linhas.length > 0 && (
+                <>
+                  <div>
+                    <h4 className="text-sm font-semibold text-[var(--surte-azul-escuro)] mb-2">
+                      {agregado.titulo} ({agregado.linhas.length} {agregado.rotuloColuna.toLowerCase()}
+                      {agregado.linhas.length !== 1 ? "s" : ""})
+                    </h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm border border-gray-100 rounded-lg overflow-hidden">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="text-left px-3 py-2 font-medium text-gray-600">
+                              {agregado.rotuloColuna}
+                            </th>
+                            {agregado.meses.map((mes) => (
+                              <th
+                                key={mes}
+                                className="text-left px-3 py-2 font-medium text-gray-600"
+                              >
+                                {mes}
+                              </th>
+                            ))}
+                            <th className="text-left px-3 py-2 font-medium text-gray-600">
+                              Total
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {agregado.linhas.map((row, i) => {
+                            const valores = agregado.meses.map((m) => row[m] ?? 0);
+                            const total = valores.reduce((a, b) => a + b, 0);
+                            return (
+                              <tr key={i} className="border-t border-gray-100">
+                                <td className="px-3 py-2">{row[agregado.rotulo]}</td>
+                                {valores.map((v, j) => (
+                                  <td key={j} className="px-3 py-2">
+                                    {v}
+                                  </td>
+                                ))}
+                                <td className="px-3 py-2 font-medium">{total}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {agregado.detalhesOrdenados.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-[var(--surte-azul-escuro)] mb-2">
+                        Entrevistas Detalhadas ({agregado.detalhesOrdenados.length} registro
+                        {agregado.detalhesOrdenados.length !== 1 ? "s" : ""})
+                      </h4>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm border border-gray-100 rounded-lg overflow-hidden">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="text-left px-3 py-2 font-medium text-gray-600">
+                                {agregado.rotuloColuna}
+                              </th>
+                              <th className="text-left px-3 py-2 font-medium text-gray-600">
+                                Data
+                              </th>
+                              <th className="text-left px-3 py-2 font-medium text-gray-600">
+                                {agregado.campo === "nome_entrevistado" ? "Programa" : "Entrevistado"}
+                              </th>
+                              <th className="text-left px-3 py-2 font-medium text-gray-600">
+                                Área
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {agregado.detalhesOrdenados.map((d) => (
+                              <tr key={d.id} className="border-t border-gray-100">
+                                <td className="px-3 py-2">{d[agregado.campo]}</td>
+                                <td className="px-3 py-2 whitespace-nowrap">{d.data}</td>
+                                <td className="px-3 py-2">
+                                  {agregado.campo === "nome_entrevistado"
+                                    ? d.nome_programa
+                                    : d.nome_entrevistado}
+                                </td>
+                                <td className="px-3 py-2">{d.area_atuacao}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Preview dos relatórios simples (Participações / Completo) */}
+              {!agregado && participacoes.length > 0 && (
                 <div>
                   <h4 className="text-sm font-semibold text-[var(--surte-azul-escuro)] mb-2">
                     Participações por Mês ({participacoes.length} registro
@@ -645,7 +1080,7 @@ function PreviewModal({
                 </div>
               )}
 
-              {linhasAreas.length > 0 && (
+              {!agregado && linhasAreas.length > 0 && (
                 <div>
                   <h4 className="text-sm font-semibold text-[var(--surte-azul-escuro)] mb-2">
                     Evolução por Área ({linhasAreas.length} registro
@@ -680,6 +1115,45 @@ function PreviewModal({
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {!agregado && detalhes.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-[var(--surte-azul-escuro)] mb-2">
+                    Entrevistas Realizadas ({detalhes.length} registro
+                    {detalhes.length !== 1 ? "s" : ""})
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm border border-gray-100 rounded-lg overflow-hidden">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-medium text-gray-600">
+                            Data
+                          </th>
+                          <th className="text-left px-3 py-2 font-medium text-gray-600">
+                            Entrevistado
+                          </th>
+                          <th className="text-left px-3 py-2 font-medium text-gray-600">
+                            Programa
+                          </th>
+                          <th className="text-left px-3 py-2 font-medium text-gray-600">
+                            Área
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {detalhes.map((d) => (
+                          <tr key={d.id} className="border-t border-gray-100">
+                            <td className="px-3 py-2 whitespace-nowrap">{d.data}</td>
+                            <td className="px-3 py-2">{d.nome_entrevistado}</td>
+                            <td className="px-3 py-2">{d.nome_programa}</td>
+                            <td className="px-3 py-2">{d.area_atuacao}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </>
