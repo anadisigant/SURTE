@@ -1,15 +1,21 @@
 from pydantic import BaseModel
 from typing import List
+from datetime import date
+
 
 class ParticipacaoMes(BaseModel):
     mes: str
     total: int
+    data_referencia: date
 
-class AreaEvolucao(BaseModel):
+
+class AreaMes(BaseModel):
     area: str
-    abr: int
-    mai: int
+    mes: str
+    total: int
+    data_referencia: date
+
 
 class RelatoriosResponse(BaseModel):
     participacoes: List[ParticipacaoMes]
-    areas: List[AreaEvolucao]
+    areas: List[AreaMes]

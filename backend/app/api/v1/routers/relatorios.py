@@ -1,66 +1,114 @@
+import logging
+logging.basicConfig(level=logging.INFO)
+
 from collections import defaultdict
-from fastapi import APIRouter, Depends, status
+from datetime import date, datetime
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
 from app.api.dependencies import get_db, get_current_user
 from app.models.domain import Participacao, Usuario
-from app.schemas.relatorio import RelatoriosResponse
+from app.schemas.relatorio import AreaMes, ParticipacaoMes, RelatoriosResponse
 
 router = APIRouter()
 
-@router.get("/", response_model=RelatoriosResponse, status_code=status.HTTP_200_OK, summary="Obter dados para gráficos de relatórios")
-async def obter_relatorios(
-    db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
-):
-    # Buscar todas as participações com detalhes do entrevistado para extrair a área de atuação
-    stmt = select(Participacao).options(selectinload(Participacao.entrevistado))
-    result = await db.execute(stmt)
-    participacoes = result.scalars().all()
-
-    meses_nome = {
-        1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho",
-        7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
-    }
-
-    # 1. Agrupar participações por mês
-    participacoes_por_mes = defaultdict(int)
-    for p in participacoes:
-        if p.data_hora:
-            mes_num = p.data_hora.month
-            mes_nome = meses_nome.get(mes_num, "Desconhecido")
-            participacoes_por_mes[mes_nome] += 1
-
-    participacoes_chart = [
-        {"mes": mes, "total": total} for mes, total in participacoes_por_mes.items()
+def month_label(month_num: int) -> str:
+    """Retorna o nome abreviado do mês em português (Jan, Fev, ...)."""
+    nomes = [
+        "Jan",
+        "Fev",
+        "Mar",
+        "Abr",
+        "Mai",
+        "Jun",
+        "Jul",
+        "Ago",
+        "Set",
+        "Out",
+        "Nov",
+        "Dez",
     ]
-    
-    # Ordenar cronologicamente conforme a ordem dos meses do ano
-    mes_order = {v: k for k, v in meses_nome.items()}
-    participacoes_chart.sort(key=lambda x: mes_order.get(x["mes"], 99))
+    return nomes[month_num - 1]
 
-    # 2. Agrupar participações por área para Abril e Maio
-    areas_data = defaultdict(lambda: {"abr": 0, "mai": 0})
+@router.get(
+    "/",
+    response_model=RelatoriosResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Obter dados para relatórios com filtro opcional por período",
+)
+async def obter_relatorios(
+    data_inicio: Optional[date] = Query(
+        None, description="Data inicial (inclusive) para filtrar participações"
+    ),
+    data_fim: Optional[date] = Query(
+        None, description="Data final (inclusive) para filtrar participações"
+    ),
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> RelatoriosResponse:
+    """Retorna participações e áreas agregadas por mês dentro do intervalo solicitado.
+
+    Se nenhum parâmetro for informado, retorna todos os registros.
+    """
+    # Construir a consulta base
+    stmt = select(Participacao).options(selectinload(Participacao.entrevistado))
+    logging.info("Query built with data_inicio=%s data_fim=%s", data_inicio, data_fim)
+
+    if data_inicio:
+        stmt = stmt.where(Participacao.data_hora >= datetime.combine(data_inicio, datetime.min.time()))
+    if data_fim:
+        stmt = stmt.where(Participacao.data_hora <= datetime.combine(data_fim, datetime.max.time()))
+
+    result = await db.execute(stmt)
+    participacoes: List[Participacao] = result.scalars().all()
+    logging.info("Fetched %d participacoes after filtering", len(participacoes))
+
+    # Agrupar por mês (total geral)
+    mapa_mes: dict[tuple[int, int], dict] = defaultdict(lambda: {"total": 0, "ref": None})
     for p in participacoes:
-        if p.entrevistado and p.data_hora:
-            area = p.entrevistado.area_atuacao
-            mes = p.data_hora.month
-            if mes == 4:
-                areas_data[area]["abr"] += 1
-            elif mes == 5:
-                areas_data[area]["mai"] += 1
+        if not p.data_hora:
+            continue
+        mes = p.data_hora.month
+        ano = p.data_hora.year
+        chave = (ano, mes)
+        mapa_mes[chave]["total"] += 1
+        if mapa_mes[chave]["ref"] is None:
+            mapa_mes[chave]["ref"] = date(ano, mes, 1)
 
-    areas_chart = []
-    for area, counts in areas_data.items():
-        areas_chart.append({
-            "area": area,
-            "abr": counts["abr"],
-            "mai": counts["mai"]
-        })
+    participacoes_chart: List[ParticipacaoMes] = [
+        ParticipacaoMes(
+            mes=f"{month_label(mes)}/{ano}",
+            total=info["total"],
+            data_referencia=info["ref"],
+        )
+        for (ano, mes), info in sorted(mapa_mes.items())
+    ]
 
-    return {
-        "participacoes": participacoes_chart,
-        "areas": areas_chart
-    }
+    # Agrupar por área e mês (formato longo)
+    mapa_area_mes: dict[tuple[str, int, int], dict] = defaultdict(lambda: {"total": 0, "ref": None})
+    for p in participacoes:
+        if not (p.data_hora and p.entrevistado):
+            continue
+        area = p.entrevistado.area_atuacao
+        mes = p.data_hora.month
+        ano = p.data_hora.year
+        chave = (area, ano, mes)
+        mapa_area_mes[chave]["total"] += 1
+        if mapa_area_mes[chave]["ref"] is None:
+            mapa_area_mes[chave]["ref"] = date(ano, mes, 1)
+
+    areas_chart: List[AreaMes] = [
+        AreaMes(
+            area=area,
+            mes=f"{month_label(mes)}/{ano}",
+            total=info["total"],
+            data_referencia=info["ref"],
+        )
+        for (area, ano, mes), info in sorted(mapa_area_mes.items())
+    ]
+
+    return RelatoriosResponse(participacoes=participacoes_chart, areas=areas_chart)
